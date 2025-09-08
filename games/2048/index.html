@@ -8,65 +8,44 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="game-container">
-    <div class="header">
-      <div class="scores">
-        <div class="score-container">
-          <div class="score-title">SCORE</div>
-          <div id="score" class="score-value">0</div>
+  <div class="game-wrapper">
+    <div class="game-header">
+      <div class="scores-container">
+        <div class="score-box">
+          <div class="score-label">SCORE</div>
+          <div class="score-value" id="score">0</div>
         </div>
-        <div class="score-container">
-          <div class="score-title">BEST</div>
-          <div id="best-score" class="score-value">0</div>
+        <div class="score-box">
+          <div class="score-label">BEST</div>
+          <div class="score-value" id="best-score">0</div>
         </div>
       </div>
-      <button id="restart-btn" class="restart-button">New Game</button>
+      <button class="new-game-btn" id="new-game">NEW GAME</button>
     </div>
-    
+
+    <div class="game-board">
+      <div class="grid-container">
+        <!-- Грид будет создан через JS -->
+      </div>
+      <div class="tiles-container" id="tiles-container"></div>
+    </div>
+
     <div class="game-message" id="game-message">
       <div class="message-content">
         <p></p>
-        <div class="lower">
-          <button id="keep-playing-button">Keep going</button>
-          <button id="retry-button">Try again</button>
+        <div class="message-buttons">
+          <button class="message-btn" id="retry-btn">Try Again</button>
+          <button class="message-btn keep-playing" id="keep-playing">Keep Going</button>
         </div>
       </div>
     </div>
-    
-    <div class="grid-container">
-      <div class="grid-row">
-        <div class="grid-cell"></div>
-        <div class="grid-cell"></div>
-        <div class="grid-cell"></div>
-        <div class="grid-cell"></div>
-      </div>
-      <div class="grid-row">
-        <div class="grid-cell"></div>
-        <div class="grid-cell"></div>
-        <div class="grid-cell"></div>
-        <div class="grid-cell"></div>
-      </div>
-      <div class="grid-row">
-        <div class="grid-cell"></div>
-        <div class="grid-cell"></div>
-        <div class="grid-cell"></div>
-        <div class="grid-cell"></div>
-      </div>
-      <div class="grid-row">
-        <div class="grid-cell"></div>
-        <div class="grid-cell"></div>
-        <div class="grid-cell"></div>
-        <div class="grid-cell"></div>
-      </div>
-    </div>
-    
-    <div class="tile-container"></div>
-    
+
     <div class="instructions">
-      <p>Use <strong>arrow keys</strong> to move the tiles. When two tiles with the same number touch, they <strong>merge into one!</strong></p>
+      <p>Join the numbers and get to the <strong>2048 tile!</strong></p>
+      <div class="swipe-hint"> Swipe to move tiles</div>
     </div>
   </div>
-  
+
   <script src="game.js"></script>
 </body>
 </html>
