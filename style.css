@@ -8,6 +8,7 @@ body {
   overflow: hidden;
   background: #000;
   font-family: 'Arial', sans-serif;
+  touch-action: none; /* Отключаем скролл при свайпах */
 }
 
 #game-container {
@@ -23,26 +24,40 @@ body {
   font-size: 20px;
   z-index: 100;
   text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+  font-weight: bold;
 }
 
 #lives { right: 10px; }
+
+#loading {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 24px;
+  z-index: 200;
+}
 
 #game-over {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  background: rgba(0,0,0,0.9);
+  background: rgba(0,0,0,0.95);
   color: white;
   padding: 30px;
   border-radius: 15px;
   text-align: center;
-  z-index: 200;
+  z-index: 300;
+  width: 80%;
+  max-width: 400px;
 }
 
 #game-over h2 {
   font-size: 32px;
   margin-bottom: 10px;
+  color: #ff5722;
 }
 
 #game-over button {
@@ -54,6 +69,7 @@ body {
   border: none;
   border-radius: 8px;
   cursor: pointer;
+  transition: background 0.2s;
 }
 
 #game-over button:hover {
