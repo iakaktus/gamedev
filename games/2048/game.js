@@ -104,9 +104,8 @@ class Game2048 {
     tile.dataset.row = row;
     tile.dataset.col = col;
     
-    // Позиционирование
-    tile.style.left = `${col * 25}%`;
-    tile.style.top = `${row * 25}%`;
+    // Позиционирование через transform для плавности
+    tile.style.transform = `translate(${col * 25}%, ${row * 25}%)`;
     
     this.tilesContainer.appendChild(tile);
     
@@ -150,9 +149,47 @@ class Game2048 {
     this.updateScore();
   }
   
+  // Анимация движения плитки
+  animateTileMove(tile, fromRow, fromCol, toRow, toCol) {
+    const dx = (toCol - fromCol) * 25;
+    const dy = (toRow - fromRow) * 25;
+    
+    tile.style.transition = 'none';
+    tile.style.transform = `translate(${fromCol * 25}%, ${fromRow * 25}%)`;
+    
+    // Принудительная перерисовка
+    tile.offsetHeight;
+    
+    // Анимируем перемещение
+    tile.style.transition = 'transform 0.15s ease';
+    tile.style.transform = `translate(${toCol * 25}%, ${toRow * 25}%)`;
+    
+    // Обновляем позиции в data-атрибутах
+    tile.dataset.row = toRow;
+    tile.dataset.col = toCol;
+  }
+  
+  // Анимация объединения плиток
+  animateTileMerge(tile, newValue) {
+    tile.classList.add('tile-merged');
+    tile.textContent = newValue;
+    
+    // Обновляем класс
+    const classes = tile.className.split(' ').filter(c => !c.startsWith('tile-'));
+    classes.push(`tile-${newValue}`);
+    classes.push('tile-merged');
+    tile.className = classes.join(' ');
+    
+    // Убираем класс анимации через немного времени
+    setTimeout(() => {
+      tile.classList.remove('tile-merged');
+    }, 150);
+  }
+  
   move(direction) {
     if (this.gameOver) return false;
     
+    // Сохраняем состояние до хода для анимаций
     const oldGrid = JSON.parse(JSON.stringify(this.grid));
     let moved = false;
     
@@ -172,6 +209,9 @@ class Game2048 {
     }
     
     if (moved) {
+      // Анимируем изменения
+      this.animateMoves(oldGrid);
+      
       setTimeout(() => {
         this.addRandomTile();
         this.updateScore();
@@ -187,6 +227,21 @@ class Game2048 {
     }
     
     return moved;
+  }
+  
+  // Анимируем все перемещения
+  animateMoves(oldGrid) {
+    // Удаляем все существующие плитки
+    this.tilesContainer.innerHTML = '';
+    
+    // Создаем новые плитки на основе текущего состояния
+    for (let row = 0; row < this.size; row++) {
+      for (let col = 0; col < this.size; col++) {
+        if (this.grid[row][col] !== 0) {
+          this.createTileElement(row, col, this.grid[row][col]);
+        }
+      }
+    }
   }
   
   moveLeft() {
