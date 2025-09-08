@@ -3,32 +3,53 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Snake Game</title>
+  <title>Game Hub</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div id="game-container">
-    <div id="score">Score: 0</div>
-    <canvas id="game-canvas"></canvas>
-    <div id="controls">
-      <div class="control-row">
-        <button id="up-btn" class="control-btn">↑</button>
+  <div id="app">
+    <div class="header">
+      <h1>🎮 Game Hub</h1>
+      <p class="welcome">Welcome, <span id="user-name">Player</span>!</p>
+    </div>
+    
+    <div class="games-grid">
+      <div class="game-card" data-game="snake">
+        <div class="game-icon">🐍</div>
+        <h3>Snake</h3>
+        <p>Classic snake game with mobs</p>
+        <div class="game-stats">
+          <span class="stat">Level: <span id="snake-level">1</span></span>
+          <span class="stat">Best: <span id="snake-best">0</span></span>
+        </div>
       </div>
-      <div class="control-row">
-        <button id="left-btn" class="control-btn">←</button>
-        <button id="down-btn" class="control-btn">↓</button>
-        <button id="right-btn" class="control-btn">→</button>
+      
+      <div class="game-card" data-game="pinball">
+        <div class="game-icon">⚾</div>
+        <h3>Pinball</h3>
+        <p>Physics-based pinball game</p>
+        <div class="game-stats">
+          <span class="stat">Level: <span id="pinball-level">1</span></span>
+          <span class="stat">Best: <span id="pinball-best">0</span></span>
+        </div>
+      </div>
+      
+      <div class="game-card coming-soon">
+        <div class="game-icon">🚀</div>
+        <h3>More Games</h3>
+        <p>Coming soon...</p>
+        <div class="game-stats">
+          <span class="stat">Stay tuned!</span>
+        </div>
       </div>
     </div>
-    <div id="game-over" class="hidden">
-      <div class="game-over-content">
-        <h2>GAME OVER</h2>
-        <div class="final-score">Score: <span id="final-score">0</span></div>
-        <button id="restart-btn">PLAY AGAIN</button>
-      </div>
+    
+    <div class="footer">
+      <p>🎮 Play and have fun!</p>
     </div>
   </div>
-  <script src="game.js"></script>
+  
+  <script src="menu.js"></script>
 </body>
 </html>
