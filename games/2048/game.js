@@ -1,379 +1,377 @@
-class Game2048 {
-  constructor() {
-    this.grid = [];
-    this.score = 0;
-    this.bestScore = 0;
-    this.gameOver = false;
-    this.gameWon = false;
-    this.keepPlaying = false;
-    this.size = 4;
+window.addEventListener('DOMContentLoaded', () => {
+  // Telegram WebApp
+  const tg = window.Telegram?.WebApp;
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    tg.BackButton.show();
     
-    this.initializeElements();
-    this.initializeGame();
-    this.setupEventListeners();
-    this.setupTelegram();
-  }
-  
-  initializeElements() {
-    this.scoreElement = document.getElementById('score');
-    this.bestScoreElement = document.getElementById('best-score');
-    this.tilesContainer = document.getElementById('tiles-container');
-    this.gameMessage = document.getElementById('game-message');
-    this.newGameBtn = document.getElementById('new-game');
-    this.retryBtn = document.getElementById('retry-btn');
-    this.keepPlayingBtn = document.getElementById('keep-playing');
-  }
-  
-  setupTelegram() {
-    const tg = window.Telegram?.WebApp;
-    if (tg) {
-      tg.ready();
-      tg.expand();
-      tg.BackButton.show();
+    tg.BackButton.onClick(() => {
+      const score = parseInt(document.querySelector('.score-value').textContent) || 0;
+      const bestScore = parseInt(document.querySelector('.best-value').textContent) || 0;
       
-      tg.BackButton.onClick(() => {
-        const gameData = {
-          game: '2048',
-          score: this.score,
-          bestScore: this.bestScore
+      const gameData = {
+        game: '2048',
+        score: score,
+        bestScore: bestScore
+      };
+      
+      try {
+        const existingData = JSON.parse(localStorage.getItem('2048_game_data') || '{}');
+        const newData = {
+          ...existingData,
+          bestScore: Math.max(score, existingData.bestScore || 0),
+          lastScore: score,
+          lastPlayed: Date.now()
         };
-        
-        try {
-          const existingData = JSON.parse(localStorage.getItem('2048_game_data') || '{}');
-          const newData = {
-            ...existingData,
-            bestScore: Math.max(this.score, existingData.bestScore || 0),
-            lastScore: this.score,
-            lastPlayed: Date.now()
-          };
-          localStorage.setItem('2048_game_data', JSON.stringify(newData));
-        } catch (e) {
-          console.error('Error saving 2048 ', e);
-        }
-        
-        window.location.href = '../../index.html#' + encodeURIComponent(JSON.stringify(gameData));
-      });
-    }
+        localStorage.setItem('2048_game_data', JSON.stringify(newData));
+      } catch (e) {
+        console.error('Error saving 2048 data:', e);
+      }
+      
+      window.location.href = '../../index.html#' + encodeURIComponent(JSON.stringify(gameData));
+    });
   }
-  
-  initializeGame() {
-    this.loadBestScore();
-    this.createEmptyGrid();
-    this.addRandomTile();
-    this.addRandomTile();
-    this.updateScore();
-    this.hideMessage();
+
+  // Game logic
+  const GRID_SIZE = 4;
+  let grid = [];
+  let score = 0;
+  let bestScore = 0;
+  let gameOver = false;
+  let gameWon = false;
+  let keepPlaying = false;
+
+  // DOM elements
+  const scoreContainer = document.querySelector('.score-container .score-value');
+  const bestContainer = document.querySelector('.best-container .best-value');
+  const gameMessage = document.querySelector('.game-message');
+  const tileContainer = document.querySelector('.tile-container');
+  const restartButton = document.querySelector('.restart-button');
+  const retryButton = document.querySelector('.retry-button');
+  const keepPlayingButton = document.querySelector('.keep-playing-button');
+
+  // Initialize game
+  function initGame() {
+    loadBestScore();
+    createGrid();
+    addRandomTile();
+    addRandomTile();
+    updateScore();
+    hideMessage();
   }
-  
-  createEmptyGrid() {
-    this.grid = [];
-    for (let i = 0; i < this.size; i++) {
-      this.grid[i] = [];
-      for (let j = 0; j < this.size; j++) {
-        this.grid[i][j] = 0;
+
+  // Create empty grid
+  function createGrid() {
+    grid = [];
+    for (let i = 0; i < GRID_SIZE; i++) {
+      grid[i] = [];
+      for (let j = 0; j < GRID_SIZE; j++) {
+        grid[i][j] = 0;
       }
     }
   }
-  
-  addRandomTile() {
+
+  // Add random tile
+  function addRandomTile() {
     const emptyCells = [];
-    for (let i = 0; i < this.size; i++) {
-      for (let j = 0; j < this.size; j++) {
-        if (this.grid[i][j] === 0) {
+    for (let i = 0; i < GRID_SIZE; i++) {
+      for (let j = 0; j < GRID_SIZE; j++) {
+        if (grid[i][j] === 0) {
           emptyCells.push({ row: i, col: j });
         }
       }
     }
-    
+
     if (emptyCells.length > 0) {
       const randomCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
       const value = Math.random() < 0.9 ? 2 : 4;
-      
-      this.grid[randomCell.row][randomCell.col] = value;
-      this.createTileElement(randomCell.row, randomCell.col, value, true);
+      grid[randomCell.row][randomCell.col] = value;
+      addTile(randomCell.row, randomCell.col, value);
     }
   }
-  
-  createTileElement(row, col, value, isNew = false) {
+
+  // Add tile to DOM
+  function addTile(row, col, value) {
     const tile = document.createElement('div');
-    tile.className = `tile tile-${value}`;
-    if (isNew) {
-      tile.classList.add('tile-new');
-    }
-    tile.textContent = value;
+    tile.className = `tile tile-${value} tile-new`;
+    tile.innerHTML = `<div class="tile-inner">${value}</div>`;
+    tile.style.transform = `translate(${col * 25}%, ${row * 25}%)`;
     tile.dataset.row = row;
     tile.dataset.col = col;
-    
-    // Позиционирование через transform
-    tile.style.transform = `translate(${col * 25}%, ${row * 25}%)`;
-    
-    this.tilesContainer.appendChild(tile);
-    
-    if (isNew) {
-      setTimeout(() => {
-        tile.classList.remove('tile-new');
-      }, 100);
-    }
-    
-    return tile;
+    tileContainer.appendChild(tile);
+
+    setTimeout(() => {
+      tile.classList.remove('tile-new');
+    }, 200);
   }
-  
-  updateScore() {
-    this.scoreElement.textContent = this.score;
-    this.bestScoreElement.textContent = this.bestScore;
+
+  // Update score display
+  function updateScore() {
+    scoreContainer.textContent = score;
+    bestContainer.textContent = bestScore;
   }
-  
-  loadBestScore() {
+
+  // Load best score from localStorage
+  function loadBestScore() {
     try {
       const data = JSON.parse(localStorage.getItem('2048_game_data') || '{}');
-      this.bestScore = data.bestScore || 0;
+      bestScore = data.bestScore || 0;
     } catch (e) {
-      this.bestScore = 0;
+      bestScore = 0;
     }
   }
-  
-  saveBestScore() {
-    if (this.score > this.bestScore) {
-      this.bestScore = this.score;
+
+  // Save best score to localStorage
+  function saveBestScore() {
+    if (score > bestScore) {
+      bestScore = score;
       try {
         const data = JSON.parse(localStorage.getItem('2048_game_data') || '{}');
         const newData = {
           ...data,
-          bestScore: this.bestScore
+          bestScore: bestScore
         };
         localStorage.setItem('2048_game_data', JSON.stringify(newData));
       } catch (e) {
         console.error('Error saving best score:', e);
       }
     }
-    this.updateScore();
+    updateScore();
   }
-  
-  move(direction) {
-    if (this.gameOver) return false;
+
+  // Move left
+  function moveLeft() {
+    let moved = false;
+    for (let row = 0; row < GRID_SIZE; row++) {
+      const rowValues = grid[row].filter(val => val !== 0);
+      
+      // Merge tiles
+      for (let i = 0; i < rowValues.length - 1; i++) {
+        if (rowValues[i] === rowValues[i + 1]) {
+          rowValues[i] *= 2;
+          rowValues[i + 1] = 0;
+          score += rowValues[i];
+          if (rowValues[i] === 2048 && !gameWon) {
+            gameWon = true;
+          }
+        }
+      }
+      
+      // Remove zeros
+      const filteredRow = rowValues.filter(val => val !== 0);
+      
+      // Add zeros to end
+      while (filteredRow.length < GRID_SIZE) {
+        filteredRow.push(0);
+      }
+      
+      // Check if row changed
+      for (let col = 0; col < GRID_SIZE; col++) {
+        if (grid[row][col] !== filteredRow[col]) {
+          moved = true;
+        }
+        grid[row][col] = filteredRow[col];
+      }
+    }
+    return moved;
+  }
+
+  // Move right
+  function moveRight() {
+    let moved = false;
+    for (let row = 0; row < GRID_SIZE; row++) {
+      const rowValues = grid[row].filter(val => val !== 0);
+      
+      // Merge tiles from right to left
+      for (let i = rowValues.length - 1; i > 0; i--) {
+        if (rowValues[i] === rowValues[i - 1]) {
+          rowValues[i] *= 2;
+          rowValues[i - 1] = 0;
+          score += rowValues[i];
+          if (rowValues[i] === 2048 && !gameWon) {
+            gameWon = true;
+          }
+        }
+      }
+      
+      // Remove zeros
+      const filteredRow = rowValues.filter(val => val !== 0);
+      
+      // Add zeros to beginning
+      const newRow = Array(GRID_SIZE).fill(0);
+      for (let i = 0; i < filteredRow.length; i++) {
+        newRow[GRID_SIZE - filteredRow.length + i] = filteredRow[i];
+      }
+      
+      // Check if row changed
+      for (let col = 0; col < GRID_SIZE; col++) {
+        if (grid[row][col] !== newRow[col]) {
+          moved = true;
+        }
+        grid[row][col] = newRow[col];
+      }
+    }
+    return moved;
+  }
+
+  // Move up
+  function moveUp() {
+    let moved = false;
+    for (let col = 0; col < GRID_SIZE; col++) {
+      const colValues = [];
+      for (let row = 0; row < GRID_SIZE; row++) {
+        if (grid[row][col] !== 0) {
+          colValues.push(grid[row][col]);
+        }
+      }
+      
+      // Merge tiles
+      for (let i = 0; i < colValues.length - 1; i++) {
+        if (colValues[i] === colValues[i + 1]) {
+          colValues[i] *= 2;
+          colValues[i + 1] = 0;
+          score += colValues[i];
+          if (colValues[i] === 2048 && !gameWon) {
+            gameWon = true;
+          }
+        }
+      }
+      
+      // Remove zeros
+      const filteredCol = colValues.filter(val => val !== 0);
+      
+      // Add zeros to end
+      while (filteredCol.length < GRID_SIZE) {
+        filteredCol.push(0);
+      }
+      
+      // Check if column changed
+      for (let row = 0; row < GRID_SIZE; row++) {
+        if (grid[row][col] !== filteredCol[row]) {
+          moved = true;
+        }
+        grid[row][col] = filteredCol[row];
+      }
+    }
+    return moved;
+  }
+
+  // Move down
+  function moveDown() {
+    let moved = false;
+    for (let col = 0; col < GRID_SIZE; col++) {
+      const colValues = [];
+      for (let row = 0; row < GRID_SIZE; row++) {
+        if (grid[row][col] !== 0) {
+          colValues.push(grid[row][col]);
+        }
+      }
+      
+      // Merge tiles from bottom to top
+      for (let i = colValues.length - 1; i > 0; i--) {
+        if (colValues[i] === colValues[i - 1]) {
+          colValues[i] *= 2;
+          colValues[i - 1] = 0;
+          score += colValues[i];
+          if (colValues[i] === 2048 && !gameWon) {
+            gameWon = true;
+          }
+        }
+      }
+      
+      // Remove zeros
+      const filteredCol = colValues.filter(val => val !== 0);
+      
+      // Add zeros to beginning
+      const newCol = Array(GRID_SIZE).fill(0);
+      for (let i = 0; i < filteredCol.length; i++) {
+        newCol[GRID_SIZE - filteredCol.length + i] = filteredCol[i];
+      }
+      
+      // Check if column changed
+      for (let row = 0; row < GRID_SIZE; row++) {
+        if (grid[row][col] !== newCol[row]) {
+          moved = true;
+        }
+        grid[row][col] = newCol[row];
+      }
+    }
+    return moved;
+  }
+
+  // Make move
+  function makeMove(direction) {
+    if (gameOver) return false;
     
-    const oldGrid = JSON.parse(JSON.stringify(this.grid));
     let moved = false;
     
     switch (direction) {
       case 'left':
-        moved = this.moveLeft();
+        moved = moveLeft();
         break;
       case 'right':
-        moved = this.moveRight();
+        moved = moveRight();
         break;
       case 'up':
-        moved = this.moveUp();
+        moved = moveUp();
         break;
       case 'down':
-        moved = this.moveDown();
+        moved = moveDown();
         break;
     }
     
     if (moved) {
+      // Update tiles display
+      tileContainer.innerHTML = '';
+      for (let row = 0; row < GRID_SIZE; row++) {
+        for (let col = 0; col < GRID_SIZE; col++) {
+          if (grid[row][col] !== 0) {
+            addTile(row, col, grid[row][col]);
+          }
+        }
+      }
+      
       setTimeout(() => {
-        this.addRandomTile();
-        this.updateScore();
-        this.saveBestScore();
+        addRandomTile();
+        updateScore();
+        saveBestScore();
         
-        if (!this.canMove()) {
-          this.gameOver = true;
-          setTimeout(() => this.showMessage('Game Over!', false), 300);
-        } else if (this.gameWon && !this.keepPlaying) {
-          setTimeout(() => this.showMessage('You Win!', true), 300);
+        if (!canMove()) {
+          gameOver = true;
+          showMessage('Game Over!', false);
+        } else if (gameWon && !keepPlaying) {
+          showMessage('You Win!', true);
         }
       }, 150);
     }
     
     return moved;
   }
-  
-  moveLeft() {
-    let moved = false;
-    
-    for (let row = 0; row < this.size; row++) {
-      const line = this.grid[row].filter(val => val !== 0);
-      
-      // Объединяем соседние одинаковые значения
-      for (let i = 0; i < line.length - 1; i++) {
-        if (line[i] === line[i + 1]) {
-          line[i] *= 2;
-          line[i + 1] = 0;
-          this.score += line[i];
-          if (line[i] === 2048 && !this.gameWon) {
-            this.gameWon = true;
-          }
-        }
-      }
-      
-      // Убираем нули
-      const filteredLine = line.filter(val => val !== 0);
-      
-      // Добавляем нули в конец
-      while (filteredLine.length < this.size) {
-        filteredLine.push(0);
-      }
-      
-      // Проверяем изменения
-      for (let col = 0; col < this.size; col++) {
-        if (this.grid[row][col] !== filteredLine[col]) {
-          moved = true;
-        }
-        this.grid[row][col] = filteredLine[col];
-      }
-    }
-    
-    return moved;
-  }
-  
-  moveRight() {
-    let moved = false;
-    
-    for (let row = 0; row < this.size; row++) {
-      const line = this.grid[row].filter(val => val !== 0);
-      
-      // Объединяем справа налево
-      for (let i = line.length - 1; i > 0; i--) {
-        if (line[i] === line[i - 1]) {
-          line[i] *= 2;
-          line[i - 1] = 0;
-          this.score += line[i];
-          if (line[i] === 2048 && !this.gameWon) {
-            this.gameWon = true;
-          }
-        }
-      }
-      
-      // Убираем нули
-      const filteredLine = line.filter(val => val !== 0);
-      
-      // Добавляем нули в начало
-      const newLine = Array(this.size).fill(0);
-      for (let i = 0; i < filteredLine.length; i++) {
-        newLine[this.size - filteredLine.length + i] = filteredLine[i];
-      }
-      
-      // Проверяем изменения
-      for (let col = 0; col < this.size; col++) {
-        if (this.grid[row][col] !== newLine[col]) {
-          moved = true;
-        }
-        this.grid[row][col] = newLine[col];
-      }
-    }
-    
-    return moved;
-  }
-  
-  moveUp() {
-    let moved = false;
-    
-    for (let col = 0; col < this.size; col++) {
-      const column = [];
-      for (let row = 0; row < this.size; row++) {
-        if (this.grid[row][col] !== 0) {
-          column.push(this.grid[row][col]);
-        }
-      }
-      
-      // Объединяем
-      for (let i = 0; i < column.length - 1; i++) {
-        if (column[i] === column[i + 1]) {
-          column[i] *= 2;
-          column[i + 1] = 0;
-          this.score += column[i];
-          if (column[i] === 2048 && !this.gameWon) {
-            this.gameWon = true;
-          }
-        }
-      }
-      
-      // Убираем нули
-      const filteredColumn = column.filter(val => val !== 0);
-      
-      // Добавляем нули в конец
-      while (filteredColumn.length < this.size) {
-        filteredColumn.push(0);
-      }
-      
-      // Проверяем изменения
-      for (let row = 0; row < this.size; row++) {
-        if (this.grid[row][col] !== filteredColumn[row]) {
-          moved = true;
-        }
-        this.grid[row][col] = filteredColumn[row];
-      }
-    }
-    
-    return moved;
-  }
-  
-  moveDown() {
-    let moved = false;
-    
-    for (let col = 0; col < this.size; col++) {
-      const column = [];
-      for (let row = 0; row < this.size; row++) {
-        if (this.grid[row][col] !== 0) {
-          column.push(this.grid[row][col]);
-        }
-      }
-      
-      // Объединяем снизу вверх
-      for (let i = column.length - 1; i > 0; i--) {
-        if (column[i] === column[i - 1]) {
-          column[i] *= 2;
-          column[i - 1] = 0;
-          this.score += column[i];
-          if (column[i] === 2048 && !this.gameWon) {
-            this.gameWon = true;
-          }
-        }
-      }
-      
-      // Убираем нули
-      const filteredColumn = column.filter(val => val !== 0);
-      
-      // Добавляем нули в начало
-      const newColumn = Array(this.size).fill(0);
-      for (let i = 0; i < filteredColumn.length; i++) {
-        newColumn[this.size - filteredColumn.length + i] = filteredColumn[i];
-      }
-      
-      // Проверяем изменения
-      for (let row = 0; row < this.size; row++) {
-        if (this.grid[row][col] !== newColumn[row]) {
-          moved = true;
-        }
-        this.grid[row][col] = newColumn[row];
-      }
-    }
-    
-    return moved;
-  }
-  
-  canMove() {
-    // Проверяем пустые клетки
-    for (let row = 0; row < this.size; row++) {
-      for (let col = 0; col < this.size; col++) {
-        if (this.grid[row][col] === 0) {
+
+  // Check if can move
+  function canMove() {
+    // Check for empty cells
+    for (let row = 0; row < GRID_SIZE; row++) {
+      for (let col = 0; col < GRID_SIZE; col++) {
+        if (grid[row][col] === 0) {
           return true;
         }
       }
     }
     
-    // Проверяем соседние клетки
-    for (let row = 0; row < this.size; row++) {
-      for (let col = 0; col < this.size; col++) {
-        const current = this.grid[row][col];
+    // Check adjacent cells
+    for (let row = 0; row < GRID_SIZE; row++) {
+      for (let col = 0; col < GRID_SIZE; col++) {
+        const current = grid[row][col];
         
-        // Проверяем справа
-        if (col < this.size - 1 && this.grid[row][col + 1] === current) {
+        // Check right
+        if (col < GRID_SIZE - 1 && grid[row][col + 1] === current) {
           return true;
         }
         
-        // Проверяем снизу
-        if (row < this.size - 1 && this.grid[row + 1][col] === current) {
+        // Check down
+        if (row < GRID_SIZE - 1 && grid[row + 1][col] === current) {
           return true;
         }
       }
@@ -381,111 +379,110 @@ class Game2048 {
     
     return false;
   }
-  
-  showMessage(text, showKeepPlaying) {
-    this.gameMessage.querySelector('p').textContent = text;
-    this.gameMessage.classList.add('show');
+
+  // Show message
+  function showMessage(text, showKeepPlaying) {
+    gameMessage.querySelector('p').textContent = text;
+    gameMessage.classList.add(showKeepPlaying ? 'game-won' : 'game-over');
     
     if (showKeepPlaying) {
-      document.getElementById('keep-playing').style.display = 'inline-block';
+      keepPlayingButton.style.display = 'inline-block';
     } else {
-      document.getElementById('keep-playing').style.display = 'none';
+      keepPlayingButton.style.display = 'none';
     }
   }
-  
-  hideMessage() {
-    this.gameMessage.classList.remove('show');
+
+  // Hide message
+  function hideMessage() {
+    gameMessage.classList.remove('game-won', 'game-over');
   }
-  
-  resetGame() {
-    this.score = 0;
-    this.gameOver = false;
-    this.gameWon = false;
-    this.keepPlaying = false;
-    this.tilesContainer.innerHTML = '';
-    this.initializeGame();
+
+  // Reset game
+  function resetGame() {
+    score = 0;
+    gameOver = false;
+    gameWon = false;
+    keepPlaying = false;
+    tileContainer.innerHTML = '';
+    initGame();
   }
-  
-  setupEventListeners() {
-    // Кнопки
-    this.newGameBtn.addEventListener('click', () => this.resetGame());
-    this.retryBtn.addEventListener('click', () => this.resetGame());
-    this.keepPlayingBtn.addEventListener('click', () => {
-      this.keepPlaying = true;
-      this.hideMessage();
-    });
+
+  // Event listeners
+  restartButton.addEventListener('click', resetGame);
+  retryButton.addEventListener('click', resetGame);
+  keepPlayingButton.addEventListener('click', () => {
+    keepPlaying = true;
+    hideMessage();
+  });
+
+  // Keyboard controls
+  document.addEventListener('keydown', (e) => {
+    switch (e.key) {
+      case 'ArrowLeft':
+        e.preventDefault();
+        makeMove('left');
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        makeMove('right');
+        break;
+      case 'ArrowUp':
+        e.preventDefault();
+        makeMove('up');
+        break;
+      case 'ArrowDown':
+        e.preventDefault();
+        makeMove('down');
+        break;
+    }
+  });
+
+  // Touch controls
+  let touchStartX = 0;
+  let touchStartY = 0;
+
+  document.addEventListener('touchstart', (e) => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+    e.preventDefault();
+  }, { passive: false });
+
+  document.addEventListener('touchend', (e) => {
+    if (!touchStartX || !touchStartY) return;
     
-    // Клавиатура
-    document.addEventListener('keydown', (e) => {
-      switch (e.key) {
-        case 'ArrowLeft':
-          e.preventDefault();
-          this.move('left');
-          break;
-        case 'ArrowRight':
-          e.preventDefault();
-          this.move('right');
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          this.move('up');
-          break;
-        case 'ArrowDown':
-          e.preventDefault();
-          this.move('down');
-          break;
-      }
-    });
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
     
-    // Свайпы
-    let touchStartX = 0;
-    let touchStartY = 0;
+    const dx = touchEndX - touchStartX;
+    const dy = touchEndY - touchStartY;
     
-    document.addEventListener('touchstart', (e) => {
-      touchStartX = e.touches[0].clientX;
-      touchStartY = e.touches[0].clientY;
-      e.preventDefault();
-    }, { passive: false });
+    const minSwipeDistance = 30;
     
-    document.addEventListener('touchend', (e) => {
-      if (!touchStartX || !touchStartY) return;
-      
-      const touchEndX = e.changedTouches[0].clientX;
-      const touchEndY = e.changedTouches[0].clientY;
-      
-      const dx = touchEndX - touchStartX;
-      const dy = touchEndY - touchStartY;
-      
-      const minSwipeDistance = 30;
-      
-      if (Math.abs(dx) < minSwipeDistance && Math.abs(dy) < minSwipeDistance) {
-        touchStartX = 0;
-        touchStartY = 0;
-        return;
-      }
-      
-      if (Math.abs(dx) > Math.abs(dy)) {
-        if (dx > 0) {
-          this.move('right');
-        } else {
-          this.move('left');
-        }
-      } else {
-        if (dy > 0) {
-          this.move('down');
-        } else {
-          this.move('up');
-        }
-      }
-      
+    if (Math.abs(dx) < minSwipeDistance && Math.abs(dy) < minSwipeDistance) {
       touchStartX = 0;
       touchStartY = 0;
-      e.preventDefault();
-    }, { passive: false });
-  }
-}
+      return;
+    }
+    
+    if (Math.abs(dx) > Math.abs(dy)) {
+      if (dx > 0) {
+        makeMove('right');
+      } else {
+        makeMove('left');
+      }
+    } else {
+      if (dy > 0) {
+        makeMove('down');
+      } else {
+        makeMove('up');
+      }
+    }
+    
+    touchStartX = 0;
+    touchStartY = 0;
+    e.preventDefault();
+  }, { passive: false });
 
-// Запуск игры
-window.addEventListener('DOMContentLoaded', () => {
-  new Game2048();
+  // Initialize game
+  initGame();
 });
