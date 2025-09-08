@@ -136,7 +136,7 @@ body {
 .game-message p {
   font-size: 60px;
   font-weight: bold;
-  height: 60px;
+  height:60px;
   line-height: 60px;
   margin-top: 222px;
 }
@@ -221,7 +221,7 @@ body {
 
 .tile-inner {
   position: absolute;
-  top: 0;
+  top:0;
   left: 0;
   width: 100%;
   height: 100%;
