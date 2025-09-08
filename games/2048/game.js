@@ -7,7 +7,6 @@ class Game2048 {
     this.gameWon = false;
     this.keepPlaying = false;
     this.size = 4;
-    this.tiles = [];
     
     this.initializeElements();
     this.initializeGame();
@@ -62,7 +61,7 @@ class Game2048 {
           };
           localStorage.setItem('2048_game_data', JSON.stringify(newData));
         } catch (e) {
-          console.error('Error saving 2048 data:', e);
+          console.error('Error saving 2048 ', e);
         }
         
         window.location.href = '../../index.html#' + encodeURIComponent(JSON.stringify(gameData));
@@ -165,11 +164,48 @@ class Game2048 {
     this.updateScore();
   }
   
+  // Функция для анимации движения плитки
+  animateTileMove(tile, fromRow, fromCol, toRow, toCol) {
+    const dx = (toCol - fromCol) * 25;
+    const dy = (toRow - fromRow) * 25;
+    
+    tile.style.transition = 'none';
+    tile.style.transform = `translate(${dx}%, ${dy}%)`;
+    
+    // Принудительная перерисовка
+    tile.offsetHeight;
+    
+    // Анимируем перемещение
+    tile.style.transition = 'transform 0.15s ease';
+    tile.style.transform = 'translate(0, 0)';
+    
+    // Обновляем позиции в data-атрибутах
+    tile.dataset.row = toRow;
+    tile.dataset.col = toCol;
+  }
+  
+  // Функция для анимации объединения плиток
+  animateTileMerge(tile, newValue) {
+    tile.classList.add('tile-merged');
+    tile.textContent = newValue;
+    tile.dataset.value = newValue;
+    
+    // Обновляем класс
+    tile.className = `tile tile-${newValue} tile-merged`;
+    
+    // Убираем класс анимации через немного времени
+    setTimeout(() => {
+      tile.classList.remove('tile-merged');
+    }, 150);
+  }
+  
   move(direction) {
     if (this.gameOver) return false;
     
-    const oldGrid = JSON.parse(JSON.stringify(this.grid));
     let moved = false;
+    
+    // Создаем копию текущего состояния для анимаций
+    const oldGrid = JSON.parse(JSON.stringify(this.grid));
     
     switch (direction) {
       case 'left':
@@ -187,6 +223,9 @@ class Game2048 {
     }
     
     if (moved) {
+      // Анимируем изменения
+      this.animateMoves(oldGrid);
+      
       setTimeout(() => {
         this.addRandomTile();
         this.updateScore();
@@ -204,38 +243,62 @@ class Game2048 {
     return moved;
   }
   
+  // Анимируем все перемещения
+  animateMoves(oldGrid) {
+    // Удаляем все существующие плитки
+    this.tilesContainer.innerHTML = '';
+    
+    // Создаем новые плитки на основе текущего состояния
+    for (let row = 0; row < this.size; row++) {
+      for (let col = 0; col < this.size; col++) {
+        if (this.grid[row][col] !== 0) {
+          this.createTileElement(row, col, this.grid[row][col]);
+        }
+      }
+    }
+  }
+  
   moveLeft() {
     let moved = false;
     
     for (let row = 0; row < this.size; row++) {
-      const line = this.grid[row].filter(val => val !== 0);
+      // Получаем непустые значения в строке
+      const values = [];
+      const positions = [];
       
-      // Объединяем
-      for (let i = 0; i < line.length - 1; i++) {
-        if (line[i] === line[i + 1]) {
-          line[i] *= 2;
-          line[i + 1] = 0;
-          this.score += line[i];
-          if (line[i] === 2048 && !this.gameWon) {
+      for (let col = 0; col < this.size; col++) {
+        if (this.grid[row][col] !== 0) {
+          values.push(this.grid[row][col]);
+          positions.push(col);
+        }
+      }
+      
+      // Объединяем соседние одинаковые значения
+      for (let i = 0; i < values.length - 1; i++) {
+        if (values[i] === values[i + 1]) {
+          values[i] *= 2;
+          values[i + 1] = 0;
+          this.score += values[i];
+          if (values[i] === 2048 && !this.gameWon) {
             this.gameWon = true;
           }
         }
       }
       
       // Убираем нули
-      const filteredLine = line.filter(val => val !== 0);
+      const filteredValues = values.filter(val => val !== 0);
       
       // Добавляем нули в конец
-      while (filteredLine.length < this.size) {
-        filteredLine.push(0);
+      while (filteredValues.length < this.size) {
+        filteredValues.push(0);
       }
       
-      // Проверяем изменения
+      // Проверяем изменения и обновляем сетку
       for (let col = 0; col < this.size; col++) {
-        if (this.grid[row][col] !== filteredLine[col]) {
+        if (this.grid[row][col] !== filteredValues[col]) {
           moved = true;
         }
-        this.grid[row][col] = filteredLine[col];
+        this.grid[row][col] = filteredValues[col];
       }
     }
     
@@ -246,35 +309,44 @@ class Game2048 {
     let moved = false;
     
     for (let row = 0; row < this.size; row++) {
-      const line = this.grid[row].filter(val => val !== 0);
+      // Получаем непустые значения в строке
+      const values = [];
+      const positions = [];
       
-      // Объединяем справа налево
-      for (let i = line.length - 1; i > 0; i--) {
-        if (line[i] === line[i - 1]) {
-          line[i] *= 2;
-          line[i - 1] = 0;
-          this.score += line[i];
-          if (line[i] === 2048 && !this.gameWon) {
+      for (let col = 0; col < this.size; col++) {
+        if (this.grid[row][col] !== 0) {
+          values.push(this.grid[row][col]);
+          positions.push(col);
+        }
+      }
+      
+      // Объединяем соседние одинаковые значения справа налево
+      for (let i = values.length - 1; i > 0; i--) {
+        if (values[i] === values[i - 1]) {
+          values[i] *= 2;
+          values[i - 1] = 0;
+          this.score += values[i];
+          if (values[i] === 2048 && !this.gameWon) {
             this.gameWon = true;
           }
         }
       }
       
       // Убираем нули
-      const filteredLine = line.filter(val => val !== 0);
+      const filteredValues = values.filter(val => val !== 0);
       
       // Добавляем нули в начало
-      const newLine = Array(this.size).fill(0);
-      for (let i = 0; i < filteredLine.length; i++) {
-        newLine[this.size - filteredLine.length + i] = filteredLine[i];
+      const newValues = Array(this.size).fill(0);
+      for (let i = 0; i < filteredValues.length; i++) {
+        newValues[this.size - filteredValues.length + i] = filteredValues[i];
       }
       
-      // Проверяем изменения
+      // Проверяем изменения и обновляем сетку
       for (let col = 0; col < this.size; col++) {
-        if (this.grid[row][col] !== newLine[col]) {
+        if (this.grid[row][col] !== newValues[col]) {
           moved = true;
         }
-        this.grid[row][col] = newLine[col];
+        this.grid[row][col] = newValues[col];
       }
     }
     
@@ -285,39 +357,41 @@ class Game2048 {
     let moved = false;
     
     for (let col = 0; col < this.size; col++) {
-      const column = [];
+      // Получаем непустые значения в столбце
+      const values = [];
+      
       for (let row = 0; row < this.size; row++) {
         if (this.grid[row][col] !== 0) {
-          column.push(this.grid[row][col]);
+          values.push(this.grid[row][col]);
         }
       }
       
-      // Объединяем
-      for (let i = 0; i < column.length - 1; i++) {
-        if (column[i] === column[i + 1]) {
-          column[i] *= 2;
-          column[i + 1] = 0;
-          this.score += column[i];
-          if (column[i] === 2048 && !this.gameWon) {
+      // Объединяем соседние одинаковые значения
+      for (let i = 0; i < values.length - 1; i++) {
+        if (values[i] === values[i + 1]) {
+          values[i] *= 2;
+          values[i + 1] = 0;
+          this.score += values[i];
+          if (values[i] === 2048 && !this.gameWon) {
             this.gameWon = true;
           }
         }
       }
       
       // Убираем нули
-      const filteredColumn = column.filter(val => val !== 0);
+      const filteredValues = values.filter(val => val !== 0);
       
       // Добавляем нули в конец
-      while (filteredColumn.length < this.size) {
-        filteredColumn.push(0);
+      while (filteredValues.length < this.size) {
+        filteredValues.push(0);
       }
       
-      // Проверяем изменения
+      // Проверяем изменения и обновляем сетку
       for (let row = 0; row < this.size; row++) {
-        if (this.grid[row][col] !== filteredColumn[row]) {
+        if (this.grid[row][col] !== filteredValues[row]) {
           moved = true;
         }
-        this.grid[row][col] = filteredColumn[row];
+        this.grid[row][col] = filteredValues[row];
       }
     }
     
@@ -328,40 +402,42 @@ class Game2048 {
     let moved = false;
     
     for (let col = 0; col < this.size; col++) {
-      const column = [];
+      // Получаем непустые значения в столбце
+      const values = [];
+      
       for (let row = 0; row < this.size; row++) {
         if (this.grid[row][col] !== 0) {
-          column.push(this.grid[row][col]);
+          values.push(this.grid[row][col]);
         }
       }
       
-      // Объединяем снизу вверх
-      for (let i = column.length - 1; i > 0; i--) {
-        if (column[i] === column[i - 1]) {
-          column[i] *= 2;
-          column[i - 1] = 0;
-          this.score += column[i];
-          if (column[i] === 2048 && !this.gameWon) {
+      // Объединяем соседние одинаковые значения снизу вверх
+      for (let i = values.length - 1; i > 0; i--) {
+        if (values[i] === values[i - 1]) {
+          values[i] *= 2;
+          values[i - 1] = 0;
+          this.score += values[i];
+          if (values[i] === 2048 && !this.gameWon) {
             this.gameWon = true;
           }
         }
       }
       
       // Убираем нули
-      const filteredColumn = column.filter(val => val !== 0);
+      const filteredValues = values.filter(val => val !== 0);
       
       // Добавляем нули в начало
-      const newColumn = Array(this.size).fill(0);
-      for (let i = 0; i < filteredColumn.length; i++) {
-        newColumn[this.size - filteredColumn.length + i] = filteredColumn[i];
+      const newValues = Array(this.size).fill(0);
+      for (let i = 0; i < filteredValues.length; i++) {
+        newValues[this.size - filteredValues.length + i] = filteredValues[i];
       }
       
-      // Проверяем изменения
+      // Проверяем изменения и обновляем сетку
       for (let row = 0; row < this.size; row++) {
-        if (this.grid[row][col] !== newColumn[row]) {
+        if (this.grid[row][col] !== newValues[row]) {
           moved = true;
         }
-        this.grid[row][col] = newColumn[row];
+        this.grid[row][col] = newValues[row];
       }
     }
     
@@ -403,7 +479,7 @@ class Game2048 {
     this.gameMessage.classList.add('show');
     
     if (showKeepPlaying) {
-      document.querySelector('.keep-playing').style.display = 'block';
+      document.querySelector('.keep-playing').style.display = 'inline-block';
     } else {
       document.querySelector('.keep-playing').style.display = 'none';
     }
