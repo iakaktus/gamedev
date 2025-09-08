@@ -132,8 +132,8 @@ window.addEventListener('DOMContentLoaded', () => {
             tile.classList.add('tile-super');
           }
           tile.textContent = value;
-          tile.style.left = `${j * 22.5}%`;
-          tile.style.top = `${i * 22.5}%`;
+          tile.style.left = `${j * 25}%`;
+          tile.style.top = `${i * 25}%`;
           tileContainer.appendChild(tile);
         }
       }
@@ -433,6 +433,7 @@ window.addEventListener('DOMContentLoaded', () => {
     try {
       const data = JSON.parse(localStorage.getItem('2048_game_data') || '{}');
       bestScore = data.bestScore || 0;
+      bestScoreElement.textContent = bestScore;
     } catch (e) {
       bestScore = 0;
     }
@@ -479,7 +480,7 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   // =============================
-  // Свайпы для мобильных
+  // Свайпы для мобильных (ИСПРАВЛЕНО)
   // =============================
   let touchStartX = 0;
   let touchStartY = 0;
@@ -487,7 +488,14 @@ window.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('touchstart', (e) => {
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
-  });
+    // Предотвращаем свайп вниз для закрытия приложения
+    e.preventDefault();
+  }, { passive: false });
+
+  document.addEventListener('touchmove', (e) => {
+    // Предотвращаем свайп вниз для закрытия приложения
+    e.preventDefault();
+  }, { passive: false });
 
   document.addEventListener('touchend', (e) => {
     if (!touchStartX || !touchStartY) return;
@@ -498,26 +506,35 @@ window.addEventListener('DOMContentLoaded', () => {
     const dx = touchEndX - touchStartX;
     const dy = touchEndY - touchStartY;
     
+    const minSwipeDistance = 30; // Минимальная дистанция свайпа
+    
     // Определяем направление свайпа
     if (Math.abs(dx) > Math.abs(dy)) {
       // Горизонтальный свайп
-      if (dx > 50) {
-        makeMove('right');
-      } else if (dx < -50) {
-        makeMove('left');
+      if (Math.abs(dx) > minSwipeDistance) {
+        if (dx > 0) {
+          makeMove('right');
+        } else {
+          makeMove('left');
+        }
       }
     } else {
       // Вертикальный свайп
-      if (dy > 50) {
-        makeMove('down');
-      } else if (dy < -50) {
-        makeMove('up');
+      if (Math.abs(dy) > minSwipeDistance) {
+        if (dy > 0) {
+          makeMove('down');
+        } else {
+          makeMove('up');
+        }
       }
     }
     
     touchStartX = 0;
     touchStartY = 0;
-  });
+    
+    // Предотвращаем свайп вниз для закрытия приложения
+    e.preventDefault();
+  }, { passive: false });
 
   // =============================
   // Обработка кнопок
