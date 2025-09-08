@@ -20,13 +20,19 @@ window.addEventListener('DOMContentLoaded', () => {
   // Игровые переменные
   // =============================
   let snake = [];
+  let mobs = [];
   let food = {};
+  let powerUps = [];
   let direction = 'right';
   let nextDirection = 'right';
   let score = 0;
+  let lives = 3;
+  let level = 1;
   let gameSpeed = 150;
   let gameRunning = false;
   let gameLoop;
+  let mobSpawnTimer = 0;
+  let powerUpSpawnTimer = 0;
 
   const scoreEl = document.getElementById('score');
   const finalScoreEl = document.getElementById('final-score');
@@ -37,18 +43,24 @@ window.addEventListener('DOMContentLoaded', () => {
   // Инициализация игры
   // =============================
   function initGame() {
-    // Начальная позиция змейки
+    // Начальная позиция игрока
     snake = [
       {x: 10, y: 10},
       {x: 9, y: 10},
       {x: 8, y: 10}
     ];
     
+    mobs = [];
+    powerUps = [];
     direction = 'right';
     nextDirection = 'right';
     score = 0;
+    lives = 3;
+    level = 1;
     gameSpeed = 150;
     gameRunning = true;
+    mobSpawnTimer = 0;
+    powerUpSpawnTimer = 0;
     
     generateFood();
     updateScore();
@@ -62,10 +74,13 @@ window.addEventListener('DOMContentLoaded', () => {
   // =============================
   function generateFood() {
     let newFood;
-    let onSnake;
+    let onSnake, onMobs, onPowerUps;
     
     do {
       onSnake = false;
+      onMobs = false;
+      onPowerUps = false;
+      
       newFood = {
         x: Math.floor(Math.random() * TILE_COUNT),
         y: Math.floor(Math.random() * TILE_COUNT)
@@ -78,9 +93,227 @@ window.addEventListener('DOMContentLoaded', () => {
           break;
         }
       }
-    } while (onSnake);
+      
+      // Проверяем, не на мобах ли еда
+      for (let mob of mobs) {
+        for (let segment of mob.body) {
+          if (segment.x === newFood.x && segment.y === newFood.y) {
+            onMobs = true;
+            break;
+          }
+        }
+        if (onMobs) break;
+      }
+      
+      // Проверяем, не на бонусах ли еда
+      for (let powerUp of powerUps) {
+        if (powerUp.x === newFood.x && powerUp.y === newFood.y) {
+          onPowerUps = true;
+          break;
+        }
+      }
+      
+    } while (onSnake || onMobs || onPowerUps);
     
     food = newFood;
+  }
+
+  // =============================
+  // Создание моба
+  // =============================
+  function spawnMob() {
+    if (mobs.length >= level + 1) return; // Ограничиваем количество мобов
+    
+    let newMob;
+    let onSnake, onMobs, onFood;
+    let attempts = 0;
+    
+    do {
+      onSnake = false;
+      onMobs = false;
+      onFood = false;
+      attempts++;
+      
+      if (attempts > 50) return; // Не можем создать моба
+      
+      // Случайная позиция (не рядом с игроком)
+      const startPos = {
+        x: Math.floor(Math.random() * (TILE_COUNT - 4)) + 2,
+        y: Math.floor(Math.random() * (TILE_COUNT - 4)) + 2
+      };
+      
+      // Проверяем расстояние до игрока
+      const distanceToPlayer = Math.abs(startPos.x - snake[0].x) + Math.abs(startPos.y - snake[0].y);
+      if (distanceToPlayer < 5) {
+        onSnake = true;
+        continue;
+      }
+      
+      // Проверяем, не на игроке ли
+      for (let segment of snake) {
+        if (segment.x === startPos.x && segment.y === startPos.y) {
+          onSnake = true;
+          break;
+        }
+      }
+      
+      // Проверяем, не на других мобах ли
+      for (let mob of mobs) {
+        for (let segment of mob.body) {
+          if (segment.x === startPos.x && segment.y === startPos.y) {
+            onMobs = true;
+            break;
+          }
+        }
+        if (onMobs) break;
+      }
+      
+      // Проверяем, не на еде ли
+      if (food.x === startPos.x && food.y === startPos.y) {
+        onFood = true;
+      }
+      
+      if (!onSnake && !onMobs && !onFood) {
+        newMob = {
+          body: [
+            {...startPos},
+            {x: startPos.x - 1, y: startPos.y},
+            {x: startPos.x - 2, y: startPos.y}
+          ],
+          direction: ['up', 'down', 'left', 'right'][Math.floor(Math.random() * 4)],
+          color: `hsl(${Math.random() * 360}, 70%, 50%)`,
+          speed: Math.random() * 0.5 + 0.5, // 0.5 - 1.0
+          moveCounter: 0
+        };
+      }
+      
+    } while ((onSnake || onMobs || onFood) && attempts < 50);
+    
+    if (newMob) {
+      mobs.push(newMob);
+    }
+  }
+
+  // =============================
+  // Создание бонуса
+  // =============================
+  function spawnPowerUp() {
+    if (powerUps.length >= 2) return; // Максимум 2 бонуса
+    if (Math.random() > 0.3) return; // 30% шанс
+    
+    let newPowerUp;
+    let onSnake, onMobs, onFood;
+    let attempts = 0;
+    
+    do {
+      onSnake = false;
+      onMobs = false;
+      onFood = false;
+      attempts++;
+      
+      if (attempts > 30) return;
+      
+      newPowerUp = {
+        x: Math.floor(Math.random() * TILE_COUNT),
+        y: Math.floor(Math.random() * TILE_COUNT),
+        type: Math.random() > 0.5 ? 'life' : 'speed',
+        timer: 300 // 5 секунд (300 * 16ms)
+      };
+      
+      // Проверяем, не на змейке ли
+      for (let segment of snake) {
+        if (segment.x === newPowerUp.x && segment.y === newPowerUp.y) {
+          onSnake = true;
+          break;
+        }
+      }
+      
+      // Проверяем, не на мобах ли
+      for (let mob of mobs) {
+        for (let segment of mob.body) {
+          if (segment.x === newPowerUp.x && segment.y === newPowerUp.y) {
+            onMobs = true;
+            break;
+          }
+        }
+        if (onMobs) break;
+      }
+      
+      // Проверяем, не на еде ли
+      if (food.x === newPowerUp.x && food.y === newPowerUp.y) {
+        onFood = true;
+      }
+      
+    } while ((onSnake || onMobs || onFood) && attempts < 30);
+    
+    if (newPowerUp) {
+      powerUps.push(newPowerUp);
+    }
+  }
+
+  // =============================
+  // ИИ для мобов
+  // =============================
+  function updateMobs() {
+    mobs.forEach(mob => {
+      mob.moveCounter += mob.speed;
+      
+      if (mob.moveCounter >= 1) {
+        mob.moveCounter = 0;
+        
+        // Простой ИИ: случайное движение с шансом следовать за игроком
+        if (Math.random() < 0.3) {
+          // 30% шанс следовать за игроком
+          const head = mob.body[0];
+          const playerHead = snake[0];
+          
+          const dx = playerHead.x - head.x;
+          const dy = playerHead.y - head.y;
+          
+          const possibleDirections = [];
+          
+          if (dx > 0) possibleDirections.push('right');
+          if (dx < 0) possibleDirections.push('left');
+          if (dy > 0) possibleDirections.push('down');
+          if (dy < 0) possibleDirections.push('up');
+          
+          if (possibleDirections.length > 0) {
+            mob.direction = possibleDirections[Math.floor(Math.random() * possibleDirections.length)];
+          }
+        } else if (Math.random() < 0.1) {
+          // 10% шанс случайного поворота
+          const directions = ['up', 'down', 'left', 'right'];
+          mob.direction = directions[Math.floor(Math.random() * directions.length)];
+        }
+        
+        // Создаем новую голову
+        const head = {...mob.body[0]};
+        
+        switch (mob.direction) {
+          case 'up': head.y--; break;
+          case 'down': head.y++; break;
+          case 'left': head.x--; break;
+          case 'right': head.x++; break;
+        }
+        
+        // Проверка границ
+        if (head.x >= 0 && head.x < TILE_COUNT && head.y >= 0 && head.y < TILE_COUNT) {
+          // Проверка столкновения с собой
+          let collisionWithSelf = false;
+          for (let segment of mob.body) {
+            if (segment.x === head.x && segment.y === head.y) {
+              collisionWithSelf = true;
+              break;
+            }
+          }
+          
+          if (!collisionWithSelf) {
+            mob.body.unshift(head);
+            mob.body.pop(); // Удаляем хвост
+          }
+        }
+      }
+    });
   }
 
   // =============================
@@ -89,10 +322,32 @@ window.addEventListener('DOMContentLoaded', () => {
   function gameStep() {
     if (!gameRunning) return;
     
-    // Обновляем направление
+    // Обновляем таймеры
+    mobSpawnTimer++;
+    powerUpSpawnTimer++;
+    
+    // Спавн мобов
+    if (mobSpawnTimer >= 200 - (level * 20)) { // Чем выше уровень, тем чаще спавн
+      spawnMob();
+      mobSpawnTimer = 0;
+    }
+    
+    // Спавн бонусов
+    if (powerUpSpawnTimer >= 300) {
+      spawnPowerUp();
+      powerUpSpawnTimer = 0;
+    }
+    
+    // Обновляем бонусы
+    powerUps = powerUps.filter(powerUp => {
+      powerUp.timer--;
+      return powerUp.timer > 0;
+    });
+    
+    // Обновляем направление игрока
     direction = nextDirection;
     
-    // Создаем новую голову
+    // Создаем новую голову игрока
     const head = {...snake[0]};
     
     switch (direction) {
@@ -104,32 +359,46 @@ window.addEventListener('DOMContentLoaded', () => {
     
     // Проверка столкновения со стенами
     if (head.x < 0 || head.x >= TILE_COUNT || head.y < 0 || head.y >= TILE_COUNT) {
-      gameOver();
+      loseLife();
       return;
     }
     
     // Проверка столкновения с собой
     for (let segment of snake) {
       if (segment.x === head.x && segment.y === head.y) {
-        gameOver();
+        loseLife();
         return;
       }
     }
     
-    // Добавляем голову
+    // Проверка столкновения с мобами
+    for (let mob of mobs) {
+      for (let segment of mob.body) {
+        if (segment.x === head.x && segment.y === head.y) {
+          loseLife();
+          return;
+        }
+      }
+    }
+    
+    // Добавляем голову игроку
     snake.unshift(head);
     
     // Проверка съедания еды
+    let ateFood = false;
     if (head.x === food.x && head.y === food.y) {
-      // Увеличиваем счет
-      score += 10;
+      ateFood = true;
+      score += 10 * level;
       updateScore();
       
-      // Увеличиваем скорость
-      if (gameSpeed > 80) {
-        gameSpeed -= 2;
-        clearInterval(gameLoop);
-        gameLoop = setInterval(gameStep, gameSpeed);
+      // Увеличиваем уровень каждые 50 очков
+      if (score >= level * 50) {
+        level++;
+        if (gameSpeed > 80) {
+          gameSpeed -= 5;
+          clearInterval(gameLoop);
+          gameLoop = setInterval(gameStep, gameSpeed);
+        }
       }
       
       generateFood();
@@ -137,6 +406,34 @@ window.addEventListener('DOMContentLoaded', () => {
       // Удаляем хвост если не съели еду
       snake.pop();
     }
+    
+    // Проверка съедания бонусов
+    powerUps = powerUps.filter(powerUp => {
+      if (head.x === powerUp.x && head.y === powerUp.y) {
+        if (powerUp.type === 'life') {
+          lives = Math.min(lives + 1, 5);
+          updateScore();
+        } else if (powerUp.type === 'speed') {
+          // Временное увеличение скорости
+          const originalSpeed = gameSpeed;
+          gameSpeed = Math.max(50, gameSpeed - 30);
+          clearInterval(gameLoop);
+          gameLoop = setInterval(gameStep, gameSpeed);
+          
+          // Возвращаем скорость через 3 секунды
+          setTimeout(() => {
+            gameSpeed = originalSpeed;
+            clearInterval(gameLoop);
+            gameLoop = setInterval(gameStep, gameSpeed);
+          }, 3000);
+        }
+        return false; // Удаляем бонус
+      }
+      return true; // Оставляем бонус
+    });
+    
+    // Обновляем мобов
+    updateMobs();
     
     // Рисуем всё
     draw();
@@ -165,13 +462,13 @@ window.addEventListener('DOMContentLoaded', () => {
       ctx.stroke();
     }
     
-    // Рисуем змейку
+    // Рисуем игрока
     snake.forEach((segment, index) => {
       if (index === 0) {
-        // Голова
+        // Голова игрока
         ctx.fillStyle = '#4caf50';
       } else {
-        // Тело (градиент от темного к светлому)
+        // Тело игрока
         const colorValue = Math.max(100, 255 - index * 5);
         ctx.fillStyle = `rgb(50, ${colorValue}, 80)`;
       }
@@ -183,7 +480,6 @@ window.addEventListener('DOMContentLoaded', () => {
         GRID_SIZE - 1
       );
       
-      // Граница сегмента
       ctx.strokeStyle = '#2e7d32';
       ctx.lineWidth = 1;
       ctx.strokeRect(
@@ -192,6 +488,40 @@ window.addEventListener('DOMContentLoaded', () => {
         GRID_SIZE - 1, 
         GRID_SIZE - 1
       );
+    });
+    
+    // Рисуем мобов
+    mobs.forEach(mob => {
+      mob.body.forEach((segment, index) => {
+        if (index === 0) {
+          // Голова моба
+          ctx.fillStyle = mob.color;
+        } else {
+          // Тело моба (темнее)
+          const rgb = hexToRgb(mob.color);
+          if (rgb) {
+            ctx.fillStyle = `rgb(${Math.max(0, rgb.r - 50)}, ${Math.max(0, rgb.g - 50)}, ${Math.max(0, rgb.b - 50)})`;
+          } else {
+            ctx.fillStyle = mob.color;
+          }
+        }
+        
+        ctx.fillRect(
+          segment.x * GRID_SIZE, 
+          segment.y * GRID_SIZE, 
+          GRID_SIZE - 1, 
+          GRID_SIZE - 1
+        );
+        
+        ctx.strokeStyle = '#333';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(
+          segment.x * GRID_SIZE, 
+          segment.y * GRID_SIZE, 
+          GRID_SIZE - 1, 
+          GRID_SIZE - 1
+        );
+      });
     });
     
     // Рисуем еду
@@ -217,6 +547,91 @@ window.addEventListener('DOMContentLoaded', () => {
       Math.PI * 2
     );
     ctx.fill();
+    
+    // Рисуем бонусы
+    powerUps.forEach(powerUp => {
+      ctx.fillStyle = powerUp.type === 'life' ? '#ff4081' : '#448aff';
+      ctx.beginPath();
+      if (powerUp.type === 'life') {
+        // Сердце
+        drawHeart(
+          powerUp.x * GRID_SIZE + GRID_SIZE/2,
+          powerUp.y * GRID_SIZE + GRID_SIZE/2,
+          GRID_SIZE/3
+        );
+      } else {
+        // Звезда
+        drawStar(
+          powerUp.x * GRID_SIZE + GRID_SIZE/2,
+          powerUp.y * GRID_SIZE + GRID_SIZE/2,
+          GRID_SIZE/3
+        );
+      }
+      ctx.fill();
+    });
+    
+    // Рисуем уровень
+    ctx.fillStyle = '#ffeb3b';
+    ctx.font = '16px Arial';
+    ctx.textAlign = 'right';
+    ctx.fillText(`Level: ${level}`, GAME_WIDTH - 10, 20);
+    
+    // Рисуем жизни
+    ctx.textAlign = 'left';
+    ctx.fillText(`Lives: ${lives}`, 10, 20);
+  }
+
+  // =============================
+  // Вспомогательные функции для отрисовки
+  // =============================
+  function hexToRgb(hex) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    return result ? {
+      r: parseInt(result[1], 16),
+      g: parseInt(result[2], 16),
+      b: parseInt(result[3], 16)
+    } : null;
+  }
+
+  function drawHeart(x, y, size) {
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.bezierCurveTo(
+      x, y - size/2,
+      x - size, y - size/2,
+      x - size, y
+    );
+    ctx.bezierCurveTo(
+      x - size, y + size/2,
+      x, y + size,
+      x, y + size
+    );
+    ctx.bezierCurveTo(
+      x, y + size,
+      x + size, y + size/2,
+      x + size, y
+    );
+    ctx.bezierCurveTo(
+      x + size, y - size/2,
+      x, y - size/2,
+      x, y
+    );
+    ctx.closePath();
+  }
+
+  function drawStar(x, y, size) {
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      ctx.lineTo(
+        x + size * Math.cos((i * 2 * Math.PI) / 5),
+        y + size * Math.sin((i * 2 * Math.PI) / 5)
+      );
+      ctx.lineTo(
+        x + (size/2) * Math.cos(((i * 2 + 1) * Math.PI) / 5),
+        y + (size/2) * Math.sin(((i * 2 + 1) * Math.PI) / 5)
+      );
+    }
+    ctx.closePath();
   }
 
   // =============================
@@ -299,6 +714,26 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   // =============================
+  // Потеря жизни
+  // =============================
+  function loseLife() {
+    lives--;
+    updateScore();
+    
+    if (lives <= 0) {
+      gameOver();
+    } else {
+      // Кратковременная неуязвимость
+      gameRunning = false;
+      setTimeout(() => {
+        if (lives > 0) {
+          gameRunning = true;
+        }
+      }, 1000);
+    }
+  }
+
+  // =============================
   // Game Over
   // =============================
   function gameOver() {
@@ -314,7 +749,7 @@ window.addEventListener('DOMContentLoaded', () => {
         .setParams({ text: `🐍 Score: ${score}`, color: '#4caf50' })
         .show()
         .onClick(() => {
-          tg.sendData(JSON.stringify({ score: score, game: 'snake' }));
+          tg.sendData(JSON.stringify({ score: score, game: 'snake_with_mobs', level: level }));
           tg.close();
         });
     }
@@ -324,7 +759,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Обновление счета
   // =============================
   function updateScore() {
-    scoreEl.textContent = `Score: ${score}`;
+    scoreEl.innerHTML = `Score: ${score} | Lives: ${lives} | Level: ${level}`;
   }
 
   // =============================
