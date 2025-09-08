@@ -263,4 +263,245 @@ class Game2048 {
       // Убираем нули
       const filteredLine = line.filter(val => val !== 0);
       
-      // Добавляем ну
+      // Добавляем нули в начало
+      const newLine = Array(this.size).fill(0);
+      for (let i = 0; i < filteredLine.length; i++) {
+        newLine[this.size - filteredLine.length + i] = filteredLine[i];
+      }
+      
+      // Проверяем изменения
+      for (let col = 0; col < this.size; col++) {
+        if (this.grid[row][col] !== newLine[col]) {
+          moved = true;
+        }
+        this.grid[row][col] = newLine[col];
+      }
+    }
+    
+    return moved;
+  }
+  
+  moveUp() {
+    let moved = false;
+    
+    for (let col = 0; col < this.size; col++) {
+      const column = [];
+      for (let row = 0; row < this.size; row++) {
+        if (this.grid[row][col] !== 0) {
+          column.push(this.grid[row][col]);
+        }
+      }
+      
+      // Объединяем
+      for (let i = 0; i < column.length - 1; i++) {
+        if (column[i] === column[i + 1]) {
+          column[i] *= 2;
+          column[i + 1] = 0;
+          this.score += column[i];
+          if (column[i] === 2048 && !this.gameWon) {
+            this.gameWon = true;
+          }
+        }
+      }
+      
+      // Убираем нули
+      const filteredColumn = column.filter(val => val !== 0);
+      
+      // Добавляем нули в конец
+      while (filteredColumn.length < this.size) {
+        filteredColumn.push(0);
+      }
+      
+      // Проверяем изменения
+      for (let row = 0; row < this.size; row++) {
+        if (this.grid[row][col] !== filteredColumn[row]) {
+          moved = true;
+        }
+        this.grid[row][col] = filteredColumn[row];
+      }
+    }
+    
+    return moved;
+  }
+  
+  moveDown() {
+    let moved = false;
+    
+    for (let col = 0; col < this.size; col++) {
+      const column = [];
+      for (let row = 0; row < this.size; row++) {
+        if (this.grid[row][col] !== 0) {
+          column.push(this.grid[row][col]);
+        }
+      }
+      
+      // Объединяем снизу вверх
+      for (let i = column.length - 1; i > 0; i--) {
+        if (column[i] === column[i - 1]) {
+          column[i] *= 2;
+          column[i - 1] = 0;
+          this.score += column[i];
+          if (column[i] === 2048 && !this.gameWon) {
+            this.gameWon = true;
+          }
+        }
+      }
+      
+      // Убираем нули
+      const filteredColumn = column.filter(val => val !== 0);
+      
+      // Добавляем нули в начало
+      const newColumn = Array(this.size).fill(0);
+      for (let i = 0; i < filteredColumn.length; i++) {
+        newColumn[this.size - filteredColumn.length + i] = filteredColumn[i];
+      }
+      
+      // Проверяем изменения
+      for (let row = 0; row < this.size; row++) {
+        if (this.grid[row][col] !== newColumn[row]) {
+          moved = true;
+        }
+        this.grid[row][col] = newColumn[row];
+      }
+    }
+    
+    return moved;
+  }
+  
+  canMove() {
+    // Проверяем пустые клетки
+    for (let row = 0; row < this.size; row++) {
+      for (let col = 0; col < this.size; col++) {
+        if (this.grid[row][col] === 0) {
+          return true;
+        }
+      }
+    }
+    
+    // Проверяем соседние клетки
+    for (let row = 0; row < this.size; row++) {
+      for (let col = 0; col < this.size; col++) {
+        const current = this.grid[row][col];
+        
+        // Проверяем справа
+        if (col < this.size - 1 && this.grid[row][col + 1] === current) {
+          return true;
+        }
+        
+        // Проверяем снизу
+        if (row < this.size - 1 && this.grid[row + 1][col] === current) {
+          return true;
+        }
+      }
+    }
+    
+    return false;
+  }
+  
+  showMessage(text, showKeepPlaying) {
+    this.gameMessage.querySelector('p').textContent = text;
+    this.gameMessage.classList.add('show');
+    
+    if (showKeepPlaying) {
+      document.querySelector('.keep-playing').style.display = 'block';
+    } else {
+      document.querySelector('.keep-playing').style.display = 'none';
+    }
+  }
+  
+  hideMessage() {
+    this.gameMessage.classList.remove('show');
+  }
+  
+  resetGame() {
+    this.score = 0;
+    this.gameOver = false;
+    this.gameWon = false;
+    this.keepPlaying = false;
+    this.tilesContainer.innerHTML = '';
+    this.initializeGame();
+  }
+  
+  setupEventListeners() {
+    // Кнопки
+    this.newGameBtn.addEventListener('click', () => this.resetGame());
+    this.retryBtn.addEventListener('click', () => this.resetGame());
+    this.keepPlayingBtn.addEventListener('click', () => {
+      this.keepPlaying = true;
+      this.hideMessage();
+    });
+    
+    // Клавиатура
+    document.addEventListener('keydown', (e) => {
+      switch (e.key) {
+        case 'ArrowLeft':
+          e.preventDefault();
+          this.move('left');
+          break;
+        case 'ArrowRight':
+          e.preventDefault();
+          this.move('right');
+          break;
+        case 'ArrowUp':
+          e.preventDefault();
+          this.move('up');
+          break;
+        case 'ArrowDown':
+          e.preventDefault();
+          this.move('down');
+          break;
+      }
+    });
+    
+    // Свайпы
+    let touchStartX = 0;
+    let touchStartY = 0;
+    
+    document.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+      e.preventDefault();
+    }, { passive: false });
+    
+    document.addEventListener('touchend', (e) => {
+      if (!touchStartX || !touchStartY) return;
+      
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      
+      const dx = touchEndX - touchStartX;
+      const dy = touchEndY - touchStartY;
+      
+      const minSwipeDistance = 30;
+      
+      if (Math.abs(dx) < minSwipeDistance && Math.abs(dy) < minSwipeDistance) {
+        touchStartX = 0;
+        touchStartY = 0;
+        return;
+      }
+      
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 0) {
+          this.move('right');
+        } else {
+          this.move('left');
+        }
+      } else {
+        if (dy > 0) {
+          this.move('down');
+        } else {
+          this.move('up');
+        }
+      }
+      
+      touchStartX = 0;
+      touchStartY = 0;
+      e.preventDefault();
+    }, { passive: false });
+  }
+}
+
+// Запуск игры
+window.addEventListener('DOMContentLoaded', () => {
+  new Game2048();
+});
