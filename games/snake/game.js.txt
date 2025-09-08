@@ -1,6 +1,21 @@
 window.addEventListener('DOMContentLoaded', () => {
 
   // =============================
+  // Telegram WebApp инициализация
+  // =============================
+  const tg = window.Telegram?.WebApp;
+  if (tg) {
+    tg.ready();
+    tg.expand();
+    tg.BackButton.show();
+    
+    // Обработка кнопки "Назад"
+    tg.BackButton.onClick(() => {
+      window.location.href = '../../index.html';
+    });
+  }
+
+  // =============================
   // Игровые константы
   // =============================
   const GRID_SIZE = 20;
@@ -79,7 +94,7 @@ window.addEventListener('DOMContentLoaded', () => {
     scoreMultiplierTimer = 0;
     
     generateFood();
-    updateScore(); // Добавлено обновление счетчика
+    updateScore();
     requestAnimationFrame(gameLoop);
   }
 
@@ -187,7 +202,7 @@ window.addEventListener('DOMContentLoaded', () => {
           mobToKill = i;
           const points = Math.floor(20 * level * scoreMultiplier);
           score += points;
-          updateScore(); // Обновляем счетчик
+          updateScore();
           createParticles(mobHead.x * GRID_SIZE + GRID_SIZE/2, mobHead.y * GRID_SIZE + GRID_SIZE/2, 10, '#ff5252');
           continue;
         }
@@ -216,7 +231,7 @@ window.addEventListener('DOMContentLoaded', () => {
       if (head.x === food.x && head.y === food.y) {
         const points = Math.floor(10 * level * scoreMultiplier);
         score += points;
-        updateScore(); // Обновляем счетчик
+        updateScore();
         
         createParticles(food.x * GRID_SIZE + GRID_SIZE/2, food.y * GRID_SIZE + GRID_SIZE/2, 8, '#ff5252');
         
@@ -225,7 +240,7 @@ window.addEventListener('DOMContentLoaded', () => {
           if (gameSpeed > 3) {
             gameSpeed -= 0.4;
           }
-          updateScore(); // Обновляем счетчик при повышении уровня
+          updateScore();
         }
         
         generateFood();
@@ -273,7 +288,7 @@ window.addEventListener('DOMContentLoaded', () => {
               }, 3000);
               break;
           }
-          updateScore(); // Обновляем счетчик при сборе бонуса
+          updateScore();
           return false;
         }
         return true;
@@ -979,7 +994,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (invincible) return;
     
     lives--;
-    updateScore(); // Обновляем счетчик
+    updateScore();
     
     if (lives <= 0) {
       gameOver();
@@ -997,7 +1012,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // =============================
-  // Game Over
+  // Game Over (АДАПТИРОВАНО ДЛЯ МЕНЮ)
   // =============================
   function gameOver() {
     gameRunning = false;
@@ -1008,25 +1023,47 @@ window.addEventListener('DOMContentLoaded', () => {
     const tg = window.Telegram?.WebApp;
     if (tg) {
       tg.MainButton
-        .setParams({ text: `🐍 Score: ${score}`, color: '#4caf50' })
+        .setParams({ 
+          text: `🏠 Back to Menu | Score: ${score}`, 
+          color: '#4caf50' 
+        })
         .show()
         .onClick(() => {
-          tg.sendData(JSON.stringify({ score: score, game: 'snake_with_mobs', level: level }));
-          tg.close();
+          // Сохраняем данные игры
+          const gameData = {
+            game: 'snake',
+            score: score,
+            level: level,
+            timestamp: Date.now()
+          };
+          
+          try {
+            // Сохраняем в localStorage
+            const existingData = JSON.parse(localStorage.getItem('snake_game_data') || '{}');
+            const newData = {
+              ...existingData,
+              bestScore: Math.max(score, existingData.bestScore || 0),
+              level: level,
+              lastPlayed: Date.now()
+            };
+            localStorage.setItem('snake_game_data', JSON.stringify(newData));
+          } catch (e) {
+            console.error('Error saving game data:', e);
+          }
+          
+          // Возвращаемся в меню
+          window.location.href = '../../index.html#' + encodeURIComponent(JSON.stringify(gameData));
         });
     }
   }
 
   // =============================
-  // Обновление счета (ИСПРАВЛЕНО)
+  // Обновление счета
   // =============================
   function updateScore() {
-    // Обновляем элемент DOM
     if (scoreEl) {
       scoreEl.textContent = `Score: ${score} | Lives: ${lives} | Level: ${level} | Speed: ${(13 - gameSpeed).toFixed(1)}`;
     }
-    
-    // Также обновляем UI на canvas
     drawUI();
   }
 
@@ -1044,4 +1081,3 @@ window.addEventListener('DOMContentLoaded', () => {
   initGame();
 
 });
-
