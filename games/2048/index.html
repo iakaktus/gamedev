@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>2048 Game</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div id="game-container">
+    <div class="header">
+      <div class="scores">
+        <div class="score-container">
+          <div class="score-title">SCORE</div>
+          <div id="score" class="score-value">0</div>
+        </div>
+        <div class="score-container">
+          <div class="score-title">BEST</div>
+          <div id="best-score" class="score-value">0</div>
+        </div>
+      </div>
+      <button id="restart-btn" class="restart-button">New Game</button>
+    </div>
+    
+    <div class="game-message" id="game-message">
+      <div class="message-content">
+        <p></p>
+        <div class="lower">
+          <button id="keep-playing-button">Keep going</button>
+          <button id="retry-button">Try again</button>
+        </div>
+      </div>
+    </div>
+    
+    <div class="grid-container">
+      <div class="grid-row">
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+      </div>
+      <div class="grid-row">
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+      </div>
+      <div class="grid-row">
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+      </div>
+      <div class="grid-row">
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+        <div class="grid-cell"></div>
+      </div>
+    </div>
+    
+    <div class="tile-container"></div>
+    
+    <div class="instructions">
+      <p>Use <strong>arrow keys</strong> to move the tiles. When two tiles with the same number touch, they <strong>merge into one!</strong></p>
+    </div>
+  </div>
+  
+  <script src="game.js"></script>
+</body>
+</html>
