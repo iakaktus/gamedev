@@ -7,7 +7,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const TILE_COUNT = 20;
   const GAME_WIDTH = GRID_SIZE * TILE_COUNT;
   const GAME_HEIGHT = GRID_SIZE * TILE_COUNT;
-  const TARGET_FPS = 90;
+  const TARGET_FPS = 60;
   const FRAME_TIME = 1000 / TARGET_FPS;
 
   // =============================
@@ -30,17 +30,15 @@ window.addEventListener('DOMContentLoaded', () => {
   let score = 0;
   let lives = 3;
   let level = 1;
-  let gameSpeed = 8; // Шаги до движения (меньше = быстрее)
+  let gameSpeed = 5; // Увеличили скорость (меньше = быстрее)
   let gameRunning = false;
   let lastTime = 0;
   let accumulator = 0;
   let stepAccumulator = 0;
   let mobSpawnTimer = 0;
   let powerUpSpawnTimer = 0;
-  
-  // Для плавности
-  let snakeHeadOffset = { x: 0, y: 0 };
-  let mobOffsets = [];
+  let invincible = false;
+  let invincibleTimer = 0;
 
   const scoreEl = document.getElementById('score');
   const finalScoreEl = document.getElementById('final-score');
@@ -65,15 +63,15 @@ window.addEventListener('DOMContentLoaded', () => {
     score = 0;
     lives = 3;
     level = 1;
-    gameSpeed = 8;
+    gameSpeed = 5; // Быстрее
     gameRunning = true;
     lastTime = 0;
     accumulator = 0;
     stepAccumulator = 0;
     mobSpawnTimer = 0;
     powerUpSpawnTimer = 0;
-    snakeHeadOffset = { x: 0, y: 0 };
-    mobOffsets = [];
+    invincible = false;
+    invincibleTimer = 0;
     
     generateFood();
     updateScore();
@@ -83,7 +81,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // =============================
-  // Основной игровой цикл (90 FPS)
+  // Основной игровой цикл
   // =============================
   function gameLoop(currentTime) {
     if (!lastTime) lastTime = currentTime;
@@ -101,9 +99,8 @@ window.addEventListener('DOMContentLoaded', () => {
       accumulator -= FRAME_TIME;
     }
     
-    // Интерполяция для плавной отрисовки
-    const alpha = accumulator / FRAME_TIME;
-    draw(alpha);
+    // Отрисовка
+    draw();
     
     requestAnimationFrame(gameLoop);
   }
@@ -112,20 +109,26 @@ window.addEventListener('DOMContentLoaded', () => {
   // Обновление игровой логики
   // =============================
   function updateGame(deltaTime) {
-    stepAccumulator += deltaTime;
-    
     // Обновляем таймеры
     mobSpawnTimer += deltaTime;
     powerUpSpawnTimer += deltaTime;
     
+    // Обновляем неуязвимость
+    if (invincible) {
+      invincibleTimer -= deltaTime;
+      if (invincibleTimer <= 0) {
+        invincible = false;
+      }
+    }
+    
     // Спавн мобов
-    if (mobSpawnTimer >= 2000 - (level * 200)) { // Чем выше уровень, тем чаще спавн
+    if (mobSpawnTimer >= Math.max(1000, 3000 - (level * 200))) {
       spawnMob();
       mobSpawnTimer = 0;
     }
     
     // Спавн бонусов
-    if (powerUpSpawnTimer >= 3000) {
+    if (powerUpSpawnTimer >= 5000) {
       spawnPowerUp();
       powerUpSpawnTimer = 0;
     }
@@ -137,6 +140,7 @@ window.addEventListener('DOMContentLoaded', () => {
     });
     
     // Движение игры
+    stepAccumulator += deltaTime;
     if (stepAccumulator >= gameSpeed * FRAME_TIME) {
       stepAccumulator = 0;
       
@@ -168,13 +172,42 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       
       // Проверка столкновения с мобами
-      for (let mob of mobs) {
+      let collidedWithMob = false;
+      let mobToKill = -1;
+      
+      for (let i = 0; i < mobs.length; i++) {
+        const mob = mobs[i];
+        const mobHead = mob.body[0];
+        
+        // Проверка столкновения голова-голова (убийство моба)
+        if (head.x === mobHead.x && head.y === mobHead.y && !invincible) {
+          // Убиваем моба
+          mobToKill = i;
+          score += 20 * level;
+          updateScore();
+          continue; // Продолжаем проверку других мобов
+        }
+        
+        // Проверка столкновения с телом моба
         for (let segment of mob.body) {
-          if (segment.x === head.x && segment.y === head.y) {
-            loseLife();
-            return;
+          if (segment.x === head.x && segment.y === head.y && !invincible) {
+            collidedWithMob = true;
+            break;
           }
         }
+        
+        if (collidedWithMob) break;
+      }
+      
+      // Удаляем убитого моба
+      if (mobToKill !== -1) {
+        mobs.splice(mobToKill, 1);
+      }
+      
+      // Если столкнулись с мобом - теряем жизнь
+      if (collidedWithMob) {
+        loseLife();
+        return;
       }
       
       // Добавляем голову игроку
@@ -190,8 +223,8 @@ window.addEventListener('DOMContentLoaded', () => {
         // Увеличиваем уровень каждые 50 очков
         if (score >= level * 50) {
           level++;
-          if (gameSpeed > 3) {
-            gameSpeed -= 0.5;
+          if (gameSpeed > 2) {
+            gameSpeed -= 0.2; // Ещё быстрее
           }
         }
         
@@ -210,12 +243,16 @@ window.addEventListener('DOMContentLoaded', () => {
           } else if (powerUp.type === 'speed') {
             // Временное увеличение скорости
             const originalSpeed = gameSpeed;
-            gameSpeed = Math.max(1, gameSpeed - 2);
+            gameSpeed = Math.max(1, gameSpeed - 1);
             
             // Возвращаем скорость через 3 секунды
             setTimeout(() => {
               gameSpeed = originalSpeed;
             }, 3000);
+          } else if (powerUp.type === 'invincible') {
+            // Неуязвимость на 5 секунд
+            invincible = true;
+            invincibleTimer = 5000;
           }
           return false; // Удаляем бонус
         }
@@ -280,7 +317,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Создание моба
   // =============================
   function spawnMob() {
-    if (mobs.length >= Math.min(level + 1, 8)) return; // Ограничиваем количество мобов
+    if (mobs.length >= Math.min(level + 2, 10)) return;
     
     let newMob;
     let onSnake, onMobs, onFood;
@@ -302,7 +339,7 @@ window.addEventListener('DOMContentLoaded', () => {
       
       // Проверяем расстояние до игрока
       const distanceToPlayer = Math.abs(startPos.x - snake[0].x) + Math.abs(startPos.y - snake[0].y);
-      if (distanceToPlayer < 5) {
+      if (distanceToPlayer < 4) {
         onSnake = true;
         continue;
       }
@@ -340,11 +377,9 @@ window.addEventListener('DOMContentLoaded', () => {
           ],
           direction: ['up', 'down', 'left', 'right'][Math.floor(Math.random() * 4)],
           color: `hsl(${Math.random() * 360}, 70%, 50%)`,
-          speed: Math.random() * 0.3 + 0.2, // 0.2 - 0.5
-          moveCounter: 0,
+          speed: Math.random() * 0.4 + 0.3,
           moveAccumulator: 0
         };
-        mobOffsets.push({ x: 0, y: 0 }); // Для плавности
       }
       
     } while ((onSnake || onMobs || onFood) && attempts < 50);
@@ -358,8 +393,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Создание бонуса
   // =============================
   function spawnPowerUp() {
-    if (powerUps.length >= 2) return;
-    if (Math.random() > 0.3) return;
+    if (powerUps.length >= 3) return;
     
     let newPowerUp;
     let onSnake, onMobs, onFood;
@@ -373,10 +407,14 @@ window.addEventListener('DOMContentLoaded', () => {
       
       if (attempts > 30) return;
       
+      // Рандомный тип бонуса
+      const types = ['life', 'speed', 'invincible'];
+      const type = types[Math.floor(Math.random() * types.length)];
+      
       newPowerUp = {
         x: Math.floor(Math.random() * TILE_COUNT),
         y: Math.floor(Math.random() * TILE_COUNT),
-        type: Math.random() > 0.5 ? 'life' : 'speed',
+        type: type,
         timer: 300
       };
       
@@ -415,15 +453,15 @@ window.addEventListener('DOMContentLoaded', () => {
   // ИИ для мобов
   // =============================
   function updateMobs() {
-    mobs.forEach((mob, index) => {
-      mob.moveAccumulator += FRAME_TIME;
+    mobs.forEach(mob => {
+      mob.moveAccumulator += 1;
       
-      if (mob.moveAccumulator >= (1 / mob.speed) * FRAME_TIME * 10) {
+      if (mob.moveAccumulator >= (1 / mob.speed) * 20) {
         mob.moveAccumulator = 0;
         
         // Простой ИИ: случайное движение с шансом следовать за игроком
-        if (Math.random() < 0.3) {
-          // 30% шанс следовать за игроком
+        if (Math.random() < 0.4) {
+          // 40% шанс следовать за игроком
           const head = mob.body[0];
           const playerHead = snake[0];
           
@@ -440,8 +478,8 @@ window.addEventListener('DOMContentLoaded', () => {
           if (possibleDirections.length > 0) {
             mob.direction = possibleDirections[Math.floor(Math.random() * possibleDirections.length)];
           }
-        } else if (Math.random() < 0.1) {
-          // 10% шанс случайного поворота
+        } else if (Math.random() < 0.15) {
+          // 15% шанс случайного поворота
           const directions = ['up', 'down', 'left', 'right'];
           mob.direction = directions[Math.floor(Math.random() * directions.length)];
         }
@@ -467,7 +505,16 @@ window.addEventListener('DOMContentLoaded', () => {
             }
           }
           
-          if (!collisionWithSelf) {
+          // Проверка столкновения с игроком
+          let collisionWithPlayer = false;
+          for (let segment of snake) {
+            if (segment.x === head.x && segment.y === head.y) {
+              collisionWithPlayer = true;
+              break;
+            }
+          }
+          
+          if (!collisionWithSelf && !collisionWithPlayer) {
             mob.body.unshift(head);
             mob.body.pop(); // Удаляем хвост
           }
@@ -477,16 +524,23 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // =============================
-  // Отрисовка игры (с интерполяцией)
+  // Отрисовка игры
   // =============================
-  function draw(alpha) {
+  function draw() {
     // Очищаем canvas
-    ctx.fillStyle = '#0a1929';
+    ctx.fillStyle = '#0d1b2a';
+    ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+    
+    // Рисуем градиентный фон
+    const gradient = ctx.createLinearGradient(0, 0, 0, GAME_HEIGHT);
+    gradient.addColorStop(0, '#1b263b');
+    gradient.addColorStop(1, '#0d1b2a');
+    ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
     
     // Рисуем сетку
-    ctx.strokeStyle = '#1a3a5a';
-    ctx.lineWidth = 0.5;
+    ctx.strokeStyle = '#415a77';
+    ctx.lineWidth = 0.3;
     for (let i = 0; i <= TILE_COUNT; i++) {
       ctx.beginPath();
       ctx.moveTo(i * GRID_SIZE, 0);
@@ -499,30 +553,34 @@ window.addEventListener('DOMContentLoaded', () => {
       ctx.stroke();
     }
     
-    // Рисуем игрока с интерполяцией
+    // Рисуем игрока
     snake.forEach((segment, index) => {
       let x = segment.x * GRID_SIZE;
       let y = segment.y * GRID_SIZE;
       
-      // Интерполяция для головы
       if (index === 0) {
-        ctx.fillStyle = '#4caf50';
+        // Голова игрока
+        ctx.fillStyle = invincible ? '#ffeb3b' : '#4caf50'; // Желтая при неуязвимости
       } else {
         // Тело игрока
-        const colorValue = Math.max(100, 255 - index * 5);
-        ctx.fillStyle = `rgb(50, ${colorValue}, 80)`;
+        const intensity = Math.max(100, 200 - index * 3);
+        ctx.fillStyle = `rgb(50, ${intensity}, 80)`;
       }
       
-      ctx.fillRect(x, y, GRID_SIZE - 1, GRID_SIZE - 1);
+      ctx.fillRect(x + 1, y + 1, GRID_SIZE - 2, GRID_SIZE - 2);
       
+      // Граница
       ctx.strokeStyle = '#2e7d32';
       ctx.lineWidth = 1;
-      ctx.strokeRect(x, y, GRID_SIZE - 1, GRID_SIZE - 1);
+      ctx.strokeRect(x + 1, y + 1, GRID_SIZE - 2, GRID_SIZE - 2);
     });
     
     // Рисуем мобов
-    mobs.forEach((mob, index) => {
+    mobs.forEach(mob => {
       mob.body.forEach((segment, segIndex) => {
+        const x = segment.x * GRID_SIZE;
+        const y = segment.y * GRID_SIZE;
+        
         if (segIndex === 0) {
           // Голова моба
           ctx.fillStyle = mob.color;
@@ -530,20 +588,17 @@ window.addEventListener('DOMContentLoaded', () => {
           // Тело моба (темнее)
           const rgb = hexToRgb(mob.color);
           if (rgb) {
-            ctx.fillStyle = `rgb(${Math.max(0, rgb.r - 50)}, ${Math.max(0, rgb.g - 50)}, ${Math.max(0, rgb.b - 50)})`;
+            ctx.fillStyle = `rgb(${Math.max(0, rgb.r - 40)}, ${Math.max(0, rgb.g - 40)}, ${Math.max(0, rgb.b - 40)})`;
           } else {
             ctx.fillStyle = mob.color;
           }
         }
         
-        const x = segment.x * GRID_SIZE;
-        const y = segment.y * GRID_SIZE;
-        
-        ctx.fillRect(x, y, GRID_SIZE - 1, GRID_SIZE - 1);
+        ctx.fillRect(x + 1, y + 1, GRID_SIZE - 2, GRID_SIZE - 2);
         
         ctx.strokeStyle = '#333';
         ctx.lineWidth = 1;
-        ctx.strokeRect(x, y, GRID_SIZE - 1, GRID_SIZE - 1);
+        ctx.strokeRect(x + 1, y + 1, GRID_SIZE - 2, GRID_SIZE - 2);
       });
     });
     
@@ -573,35 +628,76 @@ window.addEventListener('DOMContentLoaded', () => {
     
     // Рисуем бонусы
     powerUps.forEach(powerUp => {
-      ctx.fillStyle = powerUp.type === 'life' ? '#ff4081' : '#448aff';
-      ctx.beginPath();
-      if (powerUp.type === 'life') {
-        // Сердце
-        drawHeart(
-          powerUp.x * GRID_SIZE + GRID_SIZE/2,
-          powerUp.y * GRID_SIZE + GRID_SIZE/2,
-          GRID_SIZE/3
-        );
-      } else {
-        // Звезда
-        drawStar(
-          powerUp.x * GRID_SIZE + GRID_SIZE/2,
-          powerUp.y * GRID_SIZE + GRID_SIZE/2,
-          GRID_SIZE/3
-        );
+      let color, shape;
+      switch (powerUp.type) {
+        case 'life':
+          color = '#ff4081';
+          shape = 'heart';
+          break;
+        case 'speed':
+          color = '#448aff';
+          shape = 'star';
+          break;
+        case 'invincible':
+          color = '#ffeb3b';
+          shape = 'shield';
+          break;
       }
+      
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      
+      const x = powerUp.x * GRID_SIZE + GRID_SIZE/2;
+      const y = powerUp.y * GRID_SIZE + GRID_SIZE/2;
+      const size = GRID_SIZE/3;
+      
+      if (shape === 'heart') {
+        drawHeart(x, y, size);
+      } else if (shape === 'star') {
+        drawStar(x, y, size);
+      } else if (shape === 'shield') {
+        drawShield(x, y, size);
+      }
+      
       ctx.fill();
     });
     
-    // Рисуем уровень
-    ctx.fillStyle = '#ffeb3b';
-    ctx.font = '16px Arial';
+    // Рисуем UI
+    drawUI();
+  }
+
+  // =============================
+  // Отрисовка UI
+  // =============================
+  function drawUI() {
+    // Панель счета
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillRect(0, 0, GAME_WIDTH, 30);
+    
+    // Текст счета
+    ctx.fillStyle = '#4caf50';
+    ctx.font = 'bold 14px Arial';
+    ctx.textAlign = 'left';
+    ctx.fillText(`Score: ${score}`, 10, 20);
+    
+    // Жизни
+    ctx.fillStyle = '#ff5252';
+    ctx.textAlign = 'center';
+    ctx.fillText(`❤️ ${lives}`, GAME_WIDTH/2, 20);
+    
+    // Уровень
+    ctx.fillStyle = '#2196f3';
     ctx.textAlign = 'right';
     ctx.fillText(`Level: ${level}`, GAME_WIDTH - 10, 20);
     
-    // Рисуем жизни
-    ctx.textAlign = 'left';
-    ctx.fillText(`Lives: ${lives}`, 10, 20);
+    // Индикатор неуязвимости
+    if (invincible && invincibleTimer > 0) {
+      ctx.fillStyle = 'rgba(255, 235, 59, 0.3)';
+      ctx.fillRect(0, 30, GAME_WIDTH, 5);
+      ctx.fillStyle = '#ffeb3b';
+      const width = (invincibleTimer / 5000) * GAME_WIDTH;
+      ctx.fillRect(0, 30, width, 5);
+    }
   }
 
   // =============================
@@ -654,6 +750,16 @@ window.addEventListener('DOMContentLoaded', () => {
         y + (size/2) * Math.sin(((i * 2 + 1) * Math.PI) / 5)
       );
     }
+    ctx.closePath();
+  }
+
+  function drawShield(x, y, size) {
+    ctx.beginPath();
+    ctx.arc(x, y, size, 0, Math.PI * 2);
+    ctx.moveTo(x - size, y);
+    ctx.lineTo(x, y - size);
+    ctx.lineTo(x + size, y);
+    ctx.lineTo(x, y + size);
     ctx.closePath();
   }
 
@@ -740,19 +846,25 @@ window.addEventListener('DOMContentLoaded', () => {
   // Потеря жизни
   // =============================
   function loseLife() {
+    if (invincible) return;
+    
     lives--;
     updateScore();
     
     if (lives <= 0) {
       gameOver();
     } else {
-      // Кратковременная неуязвимость
+      // Неуязвимость на 2 секунды после потери жизни
+      invincible = true;
+      invincibleTimer = 2000;
+      
+      // Кратковременная пауза
       gameRunning = false;
       setTimeout(() => {
         if (lives > 0) {
           gameRunning = true;
         }
-      }, 1000);
+      }, 500);
     }
   }
 
@@ -781,7 +893,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Обновление счета
   // =============================
   function updateScore() {
-    scoreEl.innerHTML = `Score: ${score} | Lives: ${lives} | Level: ${level}`;
+    scoreEl.textContent = `Score: ${score} | Lives: ${lives} | Level: ${level}`;
   }
 
   // =============================
