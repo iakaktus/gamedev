@@ -79,7 +79,7 @@ window.addEventListener('DOMContentLoaded', () => {
     scoreMultiplierTimer = 0;
     
     generateFood();
-    updateScore();
+    updateScore(); // Добавлено обновление счетчика
     requestAnimationFrame(gameLoop);
   }
 
@@ -187,7 +187,7 @@ window.addEventListener('DOMContentLoaded', () => {
           mobToKill = i;
           const points = Math.floor(20 * level * scoreMultiplier);
           score += points;
-          updateScore();
+          updateScore(); // Обновляем счетчик
           createParticles(mobHead.x * GRID_SIZE + GRID_SIZE/2, mobHead.y * GRID_SIZE + GRID_SIZE/2, 10, '#ff5252');
           continue;
         }
@@ -216,7 +216,8 @@ window.addEventListener('DOMContentLoaded', () => {
       if (head.x === food.x && head.y === food.y) {
         const points = Math.floor(10 * level * scoreMultiplier);
         score += points;
-        updateScore();
+        updateScore(); // Обновляем счетчик
+        
         createParticles(food.x * GRID_SIZE + GRID_SIZE/2, food.y * GRID_SIZE + GRID_SIZE/2, 8, '#ff5252');
         
         if (score >= level * 50) {
@@ -224,6 +225,7 @@ window.addEventListener('DOMContentLoaded', () => {
           if (gameSpeed > 3) {
             gameSpeed -= 0.4;
           }
+          updateScore(); // Обновляем счетчик при повышении уровня
         }
         
         generateFood();
@@ -271,7 +273,7 @@ window.addEventListener('DOMContentLoaded', () => {
               }, 3000);
               break;
           }
-          updateScore();
+          updateScore(); // Обновляем счетчик при сборе бонуса
           return false;
         }
         return true;
@@ -347,7 +349,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // =============================
-  // Создание моба (БОЛЕЕ АКТИВНЫЕ)
+  // Создание моба
   // =============================
   function spawnMob() {
     if (mobs.length >= Math.min(level + 2, 10)) return;
@@ -397,8 +399,7 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       
       if (!onSnake && !onMobs && !onFood) {
-        // БОЛЕЕ ДЛИННЫЕ И АКТИВНЫЕ МОБЫ
-        const length = Math.floor(Math.random() * 3) + 3; // 3-5 сегментов
+        const length = Math.floor(Math.random() * 3) + 3;
         const body = [];
         for (let i = 0; i < length; i++) {
           body.push({x: startPos.x - i, y: startPos.y});
@@ -408,12 +409,11 @@ window.addEventListener('DOMContentLoaded', () => {
           body: body,
           direction: ['up', 'down', 'left', 'right'][Math.floor(Math.random() * 4)],
           color: `hsl(${Math.random() * 360}, 80%, 60%)`,
-          speed: Math.random() * 0.5 + 0.3, // БОЛЕЕ БЫСТРЫЕ
+          speed: Math.random() * 0.5 + 0.3,
           moveAccumulator: 0,
           frozen: false,
           frozenTimer: 0,
-          // ИНТЕЛЛЕКТ МОБОВ
-          intelligence: Math.random() * 0.6 + 0.4, // 0.4-1.0
+          intelligence: Math.random() * 0.6 + 0.4,
           targetPlayerTimer: 0
         };
       }
@@ -482,7 +482,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // =============================
-  // ИИ для мобов (БОЛЕЕ АКТИВНЫЙ)
+  // ИИ для мобов
   // =============================
   function updateMobs() {
     mobs.forEach(mob => {
@@ -499,10 +499,8 @@ window.addEventListener('DOMContentLoaded', () => {
       if (mob.moveAccumulator >= (1 / mob.speed) * 20) {
         mob.moveAccumulator = 0;
         
-        // ИНТЕЛЛЕКТ МОБОВ - БОЛЕЕ АКТИВНЫЕ
         mob.targetPlayerTimer += 1;
         
-        // БОЛЕЕ ЧАСТО СЛЕДУЮТ ЗА ИГРОКОМ
         if (Math.random() < mob.intelligence || mob.targetPlayerTimer > 10) {
           const head = mob.body[0];
           const playerHead = snake[0];
@@ -512,11 +510,9 @@ window.addEventListener('DOMContentLoaded', () => {
           
           const possibleDirections = [];
           
-          // БОЛЕЕ УМНОЕ ВЫБИРАНИЕ НАПРАВЛЕНИЯ
           if (Math.abs(dx) > Math.abs(dy)) {
             if (dx > 0) possibleDirections.push('right');
             else possibleDirections.push('left');
-            // Но иногда выбирают вертикальное направление
             if (Math.random() < 0.3) {
               if (dy > 0) possibleDirections.push('down');
               else possibleDirections.push('up');
@@ -536,7 +532,6 @@ window.addEventListener('DOMContentLoaded', () => {
           
           mob.targetPlayerTimer = 0;
         } else if (Math.random() < 0.2) {
-          // 20% шанс случайного поворота
           const directions = ['up', 'down', 'left', 'right'];
           mob.direction = directions[Math.floor(Math.random() * directions.length)];
         }
@@ -577,7 +572,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // =============================
-  // Отрисовка игры (С ВЫДЕЛЕНИЕМ ГОЛОВ)
+  // Отрисовка игры
   // =============================
   function draw() {
     ctx.fillStyle = '#0d1b2a';
@@ -605,17 +600,16 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     ctx.setLineDash([]);
     
-    // Рисуем игрока (С ВЫДЕЛЕННОЙ ГОЛОВОЙ)
+    // Рисуем игрока
     snake.forEach((segment, index) => {
       let x = segment.x * GRID_SIZE;
       let y = segment.y * GRID_SIZE;
       
       if (index === 0) {
-        // ВЫДЕЛЕННАЯ ГОЛОВА ИГРОКА
         ctx.fillStyle = invincible ? '#ffeb3b' : '#4caf50';
         ctx.fillRect(x + 1, y + 1, GRID_SIZE - 2, GRID_SIZE - 2);
         
-        // ГЛАЗА НА ГОЛОВЕ
+        // Глаза на голове
         ctx.fillStyle = '#000';
         const eyeSize = GRID_SIZE / 6;
         if (direction === 'right') {
@@ -642,18 +636,17 @@ window.addEventListener('DOMContentLoaded', () => {
       ctx.strokeRect(x + 1, y + 1, GRID_SIZE - 2, GRID_SIZE - 2);
     });
     
-    // Рисуем мобов (С ВЫДЕЛЕННЫМИ ГОЛОВАМИ)
+    // Рисуем мобов
     mobs.forEach(mob => {
       mob.body.forEach((segment, segIndex) => {
         const x = segment.x * GRID_SIZE;
         const y = segment.y * GRID_SIZE;
         
         if (segIndex === 0) {
-          // ВЫДЕЛЕННАЯ ГОЛОВА МОБА
           ctx.fillStyle = mob.frozen ? '#00bcd4' : mob.color;
           ctx.fillRect(x + 1, y + 1, GRID_SIZE - 2, GRID_SIZE - 2);
           
-          // ГЛАЗА НА ГОЛОВЕ МОБА
+          // Глаза на голове моба
           ctx.fillStyle = '#000';
           const eyeSize = GRID_SIZE / 6;
           const mobDirection = mob.direction;
@@ -783,46 +776,51 @@ window.addEventListener('DOMContentLoaded', () => {
   // Отрисовка UI
   // =============================
   function drawUI() {
-    ctx.fillStyle = 'rgba(13, 27, 42, 0.9)';
-    ctx.fillRect(0, -30, GAME_WIDTH, 30);
-    ctx.fillRect(0, GAME_HEIGHT, GAME_WIDTH, 30);
+    // Фон UI вне игрового поля
+    ctx.fillStyle = 'rgba(13, 27, 42, 0.95)';
+    ctx.fillRect(0, -40, GAME_WIDTH, 40); // Верхняя панель
+    ctx.fillRect(0, GAME_HEIGHT, GAME_WIDTH, 40); // Нижняя панель
     
+    // Верхний UI
     ctx.fillStyle = '#4caf50';
-    ctx.font = 'bold 14px Arial';
+    ctx.font = 'bold 16px Arial';
     ctx.textAlign = 'left';
-    ctx.fillText(`Score: ${score}`, 10, -10);
+    ctx.fillText(`Score: ${score}`, 15, -15);
     
     if (scoreMultiplier > 1) {
       ctx.fillStyle = '#9c27b0';
-      ctx.fillText(`x${scoreMultiplier}`, 100, -10);
+      ctx.fillText(`x${scoreMultiplier}`, 120, -15);
     }
     
     ctx.fillStyle = '#ff5252';
     ctx.textAlign = 'center';
-    ctx.fillText(`❤️ ${lives}`, GAME_WIDTH/2, -10);
+    ctx.fillText(`❤️ ${lives}`, GAME_WIDTH/2, -15);
     
     ctx.fillStyle = '#2196f3';
     ctx.textAlign = 'right';
-    ctx.fillText(`Level: ${level}`, GAME_WIDTH - 10, -10);
+    ctx.fillText(`Level: ${level}`, GAME_WIDTH - 15, -15);
     
+    // Нижний UI
     ctx.textAlign = 'left';
     ctx.fillStyle = '#ff9800';
-    ctx.fillText(`Speed: ${(13 - gameSpeed).toFixed(1)}`, 10, GAME_HEIGHT + 20);
+    ctx.font = 'bold 14px Arial';
+    ctx.fillText(`Speed: ${(13 - gameSpeed).toFixed(1)}`, 15, GAME_HEIGHT + 25);
     
+    // Индикаторы
     if (invincible && invincibleTimer > 0) {
-      ctx.fillStyle = 'rgba(255, 235, 59, 0.3)';
-      ctx.fillRect(0, GAME_HEIGHT + 5, GAME_WIDTH, 3);
+      ctx.fillStyle = 'rgba(255, 235, 59, 0.4)';
+      ctx.fillRect(0, GAME_HEIGHT + 5, GAME_WIDTH, 4);
       ctx.fillStyle = '#ffeb3b';
       const width = (invincibleTimer / 5000) * GAME_WIDTH;
-      ctx.fillRect(0, GAME_HEIGHT + 5, width, 3);
+      ctx.fillRect(0, GAME_HEIGHT + 5, width, 4);
     }
     
     if (scoreMultiplier > 1 && scoreMultiplierTimer > 0) {
-      ctx.fillStyle = 'rgba(156, 39, 176, 0.3)';
-      ctx.fillRect(0, GAME_HEIGHT + 10, GAME_WIDTH, 3);
+      ctx.fillStyle = 'rgba(156, 39, 176, 0.4)';
+      ctx.fillRect(0, GAME_HEIGHT + 12, GAME_WIDTH, 4);
       ctx.fillStyle = '#9c27b0';
       const width = (scoreMultiplierTimer / 10000) * GAME_WIDTH;
-      ctx.fillRect(0, GAME_HEIGHT + 10, width, 3);
+      ctx.fillRect(0, GAME_HEIGHT + 12, width, 4);
     }
   }
 
@@ -981,7 +979,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (invincible) return;
     
     lives--;
-    updateScore();
+    updateScore(); // Обновляем счетчик
     
     if (lives <= 0) {
       gameOver();
@@ -1019,14 +1017,30 @@ window.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // =============================
+  // Обновление счета (ИСПРАВЛЕНО)
+  // =============================
   function updateScore() {
+    // Обновляем элемент DOM
+    if (scoreEl) {
+      scoreEl.textContent = `Score: ${score} | Lives: ${lives} | Level: ${level} | Speed: ${(13 - gameSpeed).toFixed(1)}`;
+    }
+    
+    // Также обновляем UI на canvas
+    drawUI();
   }
 
+  // =============================
+  // Перезапуск игры
+  // =============================
   restartBtn.addEventListener('click', () => {
     gameOverEl.classList.add('hidden');
     initGame();
   });
 
+  // =============================
+  // Запуск игры
+  // =============================
   initGame();
 
 });
