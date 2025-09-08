@@ -8,22 +8,35 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="game-wrapper">
-    <div class="game-header">
+  <div class="container">
+    <div class="heading">
+      <h1 class="title">2048</h1>
       <div class="scores-container">
-        <div class="score-box">
-          <div class="score-label">SCORE</div>
-          <div class="score-value" id="score">0</div>
+        <div class="score-container">
+          <div class="score-title">SCORE</div>
+          <div class="score-value">0</div>
         </div>
-        <div class="score-box">
-          <div class="score-label">BEST</div>
-          <div class="score-value" id="best-score">0</div>
+        <div class="best-container">
+          <div class="score-title">BEST</div>
+          <div class="best-value">0</div>
         </div>
       </div>
-      <button class="new-game-btn" id="new-game">NEW GAME</button>
     </div>
 
-    <div class="game-board">
+    <div class="above-game">
+      <p class="game-intro">Join the numbers and get to the <strong>2048 tile!</strong></p>
+      <button class="restart-button">New Game</button>
+    </div>
+
+    <div class="game-container">
+      <div class="game-message">
+        <p></p>
+        <div class="lower">
+          <button class="keep-playing-button">Keep going</button>
+          <button class="retry-button">Try again</button>
+        </div>
+      </div>
+
       <div class="grid-container">
         <div class="grid-row">
           <div class="grid-cell"></div>
@@ -50,23 +63,13 @@
           <div class="grid-cell"></div>
         </div>
       </div>
-      <div class="tiles-container" id="tiles-container"></div>
+
+      <div class="tile-container"></div>
     </div>
 
-    <div class="game-message" id="game-message">
-      <div class="message-content">
-        <p></p>
-        <div class="message-buttons">
-          <button class="message-btn" id="retry-btn">Try Again</button>
-          <button class="message-btn keep-playing" id="keep-playing" style="display: none;">Keep Going</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="instructions">
-      <p>Join the numbers and get to the <strong>2048 tile!</strong></p>
-      <div class="swipe-hint">Swipe to move tiles</div>
-    </div>
+    <p class="game-explanation">
+      <strong class="important">How to play:</strong> Use your <strong>arrow keys</strong> to move the tiles. When two tiles with the same number touch, they <strong>merge into one!</strong>
+    </p>
   </div>
 
   <script src="game.js"></script>
