@@ -15,6 +15,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
+  touch-action: none; /* Предотвращает системные свайпы */
 }
 
 #game-container {
@@ -85,6 +86,7 @@ body {
   align-items: center;
   justify-content: center;
   text-align: center;
+  border-radius: 10px;
 }
 
 .game-message.game-won {
@@ -129,11 +131,14 @@ body {
   border-radius: 6px;
   position: relative;
   padding: 10px;
+  width: 100%;
+  aspect-ratio: 1; /* Квадратное поле */
 }
 
 .grid-row {
   display: flex;
   margin-bottom: 10px;
+  width: 100%;
 }
 
 .grid-row:last-child {
@@ -141,8 +146,8 @@ body {
 }
 
 .grid-cell {
-  width: 20%;
-  height: 80px;
+  width: 25%; /* 1/4 ширины */
+  aspect-ratio: 1; /* Квадратные ячейки */
   background: rgba(238, 228, 218, 0.35);
   border-radius: 3px;
   margin-right: 10px;
@@ -154,16 +159,16 @@ body {
 
 .tile-container {
   position: absolute;
-  top: 20px;
-  left: 20px;
-  right: 20px;
-  bottom: 20px;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  bottom: 10px;
 }
 
 .tile {
   position: absolute;
-  width: 20%;
-  height: 80px;
+  width: 25%; /* 1/4 ширины контейнера */
+  height: 25%; /* 1/4 высоты контейнера */
   border-radius: 3px;
   background: #eee4da;
   font-weight: bold;
@@ -172,14 +177,9 @@ body {
   justify-content: center;
   font-size: 32px;
   transition: all 0.15s ease;
-  margin-right: 10px;
-  margin-bottom: 10px;
 }
 
-.tile:last-child {
-  margin-right: 0;
-}
-
+/* Цвета плиток */
 .tile-2 { background: #eee4da; color: #776e65; }
 .tile-4 { background: #ede0c8; color: #776e65; }
 .tile-8 { background: #f2b179; color: #f9f6f2; }
@@ -208,7 +208,6 @@ body {
 /* Адаптация для мобильных */
 @media (max-width: 500px) {
   .tile {
-    height: 70px;
     font-size: 24px;
   }
   
@@ -226,5 +225,15 @@ body {
   
   .message-content p {
     font-size: 24px;
+  }
+  
+  .header {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+  
+  .scores {
+    justify-content: center;
   }
 }
