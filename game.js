@@ -1,17 +1,10 @@
-// Полностью переписанный game.js — без чёрного экрана
 window.addEventListener('DOMContentLoaded', () => {
 
-  // =============================
-  // Проверка Matter.js
-  // =============================
   if (typeof Matter === 'undefined') {
     document.getElementById('loading').innerText = '❌ Matter.js не загружен!';
     return;
   }
 
-  // =============================
-  // Telegram WebApp
-  // =============================
   const tg = window.Telegram?.WebApp;
   if (tg) {
     tg.ready();
@@ -19,23 +12,15 @@ window.addEventListener('DOMContentLoaded', () => {
     tg.MainButton.setParams({ color: '#ff5722', text_color: '#ffffff' });
   }
 
-  // =============================
-  // Константы
-  // =============================
   const width = window.innerWidth;
   const height = window.innerHeight;
 
-  // =============================
-  // Matter.js Setup — БЕЗОПАСНЫЙ РЕНДЕР
-  // =============================
   const { Engine, Render, Runner, World, Bodies, Body, Events, Constraint } = Matter;
 
-  // Создаём движок
   const engine = Engine.create({
-    gravity: { x: 0, y: 0.8 }
+    gravity: { x: 0, y: 0.6 } // чуть меньше гравитации
   });
 
-  // Создаём КОНТЕЙНЕР для Canvas — не используем document.body!
   const canvasContainer = document.createElement('div');
   canvasContainer.id = 'canvas-container';
   canvasContainer.style.position = 'absolute';
@@ -46,23 +31,19 @@ window.addEventListener('DOMContentLoaded', () => {
   canvasContainer.style.zIndex = '1';
   document.getElementById('game-container').appendChild(canvasContainer);
 
-  // Создаём рендерер — привязываем к контейнеру
   const render = Render.create({
-    element: canvasContainer, // 👈 ВАЖНО: не document.body!
+    element: canvasContainer,
     engine: engine,
     options: {
       width: width,
       height: height,
       wireframes: false,
-      background: '#0a0a1a',
+      background: '#0a0a2a',
       pixelRatio: window.devicePixelRatio || 1,
       antialias: true
     }
   });
 
-  // =============================
-  // Игровые переменные
-  // =============================
   let score = 0;
   let lives = 3;
   let isGameOver = false;
@@ -75,61 +56,101 @@ window.addEventListener('DOMContentLoaded', () => {
   const restartBtn = document.getElementById('restart-btn');
   const loadingEl = document.getElementById('loading');
 
-  // =============================
-  // Создание мира
-  // =============================
   function createWorld() {
 
-    // Стены
-    const wallOptions = { isStatic: true, restitution: 0.9, render: { fillStyle: '#333' } };
-    const walls = [
-      Bodies.rectangle(width / 2, 0, width, 50, wallOptions),
-      Bodies.rectangle(0, height / 2, 50, height, wallOptions),
-      Bodies.rectangle(width, height / 2, 50, height, wallOptions),
-    ];
+    // ТОЛЬКО НИЖНИЕ СТЕНЫ С ДЫРОЙ ПОСЕРЕДИНЕ
+    const wallThickness = 50;
+    
+    // Левая нижняя стена
+    const floorLeft = Bodies.rectangle(
+      width * 0.25, 
+      height - wallThickness/2, 
+      width * 0.45, 
+      wallThickness, 
+      { isStatic: true, render: { fillStyle: '#444' } }
+    );
 
-    // Пол с ямой
-    const floorLeft = Bodies.rectangle(width * 0.25, height - 25, width * 0.45, 50, wallOptions);
-    const floorRight = Bodies.rectangle(width * 0.75, height - 25, width * 0.45, 50, wallOptions);
+    // Правая нижняя стена
+    const floorRight = Bodies.rectangle(
+      width * 0.75, 
+      height - wallThickness/2, 
+      width * 0.45, 
+      wallThickness, 
+      { isStatic: true, render: { fillStyle: '#444' } }
+    );
 
-    // Флипперы
-    const pivotY = height - 150;
-    const leftFlipper = Bodies.rectangle(width * 0.3, pivotY, 120, 20, {
+    // Верхние стены (рамка)
+    const topWall = Bodies.rectangle(width / 2, wallThickness/2, width, wallThickness, {
       isStatic: true,
-      chamfer: { radius: 10 },
-      render: { fillStyle: '#ff5722' }
+      render: { fillStyle: '#444' }
     });
 
-    const rightFlipper = Bodies.rectangle(width * 0.7, pivotY, 120, 20, {
+    const leftWall = Bodies.rectangle(wallThickness/2, height/2, wallThickness, height, {
       isStatic: true,
-      chamfer: { radius: 10 },
-      render: { fillStyle: '#ff5722' }
+      render: { fillStyle: '#444' }
     });
+
+    const rightWall = Bodies.rectangle(width - wallThickness/2, height/2, wallThickness, height, {
+      isStatic: true,
+      render: { fillStyle: '#444' }
+    });
+
+    // Флипперы — БОЛЬШЕ И БЛИЖЕ К ЦЕНТРУ
+    const flipperY = height - 120; // выше от нижней границы
+    const flipperLength = 140; // длиннее
+    const flipperWidth = 25;
+
+    const leftFlipper = Bodies.rectangle(
+      width * 0.4, 
+      flipperY, 
+      flipperLength, 
+      flipperWidth, 
+      {
+        isStatic: true,
+        chamfer: { radius: 10 },
+        render: { fillStyle: '#ff5722' }
+      }
+    );
+
+    const rightFlipper = Bodies.rectangle(
+      width * 0.6, 
+      flipperY, 
+      flipperLength, 
+      flipperWidth, 
+      {
+        isStatic: true,
+        chamfer: { radius: 10 },
+        render: { fillStyle: '#ff5722' }
+      }
+    );
 
     // Шарик
-    ball = Bodies.circle(width / 2, 100, 15, {
+    ball = Bodies.circle(width / 2, 200, 18, {
       restitution: 0.8,
-      frictionAir: 0.005,
+      frictionAir: 0.004,
       density: 0.001,
       render: { fillStyle: '#ff3366' }
     });
 
-    // Буферы
+    // Буферы (bumper'ы)
     const bumpers = [
-      Bodies.circle(width * 0.3, height * 0.3, 25, { isStatic: true, restitution: 1.2, render: { fillStyle: '#00ffff' } }),
-      Bodies.circle(width * 0.7, height * 0.3, 25, { isStatic: true, restitution: 1.2, render: { fillStyle: '#00ffff' } }),
-      Bodies.circle(width * 0.5, height * 0.5, 30, { isStatic: true, restitution: 1.3, render: { fillStyle: '#ffff00' } }),
+      Bodies.circle(width * 0.3, height * 0.25, 30, { isStatic: true, restitution: 1.3, render: { fillStyle: '#00ffff' } }),
+      Bodies.circle(width * 0.7, height * 0.25, 30, { isStatic: true, restitution: 1.3, render: { fillStyle: '#00ffff' } }),
+      Bodies.circle(width * 0.5, height * 0.4, 35, { isStatic: true, restitution: 1.4, render: { fillStyle: '#ffff00' } }),
+      Bodies.circle(width * 0.2, height * 0.6, 25, { isStatic: true, restitution: 1.2, render: { fillStyle: '#00ff00' } }),
+      Bodies.circle(width * 0.8, height * 0.6, 25, { isStatic: true, restitution: 1.2, render: { fillStyle: '#00ff00' } }),
     ];
 
-    // Рампы
+    // Рампы и препятствия
     const ramps = [
-      Bodies.rectangle(width * 0.4, height * 0.7, 100, 20, { isStatic: true, angle: -0.3, render: { fillStyle: '#444' } }),
-      Bodies.rectangle(width * 0.6, height * 0.7, 100, 20, { isStatic: true, angle: 0.3, render: { fillStyle: '#444' } }),
+      Bodies.rectangle(width * 0.3, height * 0.7, 120, 20, { isStatic: true, angle: -0.4, render: { fillStyle: '#666' } }),
+      Bodies.rectangle(width * 0.7, height * 0.7, 120, 20, { isStatic: true, angle: 0.4, render: { fillStyle: '#666' } }),
+      Bodies.rectangle(width * 0.5, height * 0.85, 200, 20, { isStatic: true, angle: 0, render: { fillStyle: '#888' } }),
     ];
 
-    // Добавляем всё в мир
     World.add(engine.world, [
-      ...walls, floorLeft, floorRight,
+      topWall, leftWall, rightWall,
+      floorLeft, floorRight,
       leftFlipper, rightFlipper,
       ball,
       ...bumpers,
@@ -138,17 +159,17 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // Ограничения флипперов
     const leftPivot = Constraint.create({
-      pointA: { x: width * 0.3 - 50, y: pivotY },
+      pointA: { x: width * 0.4 - flipperLength/2 + 20, y: flipperY },
       bodyB: leftFlipper,
-      pointB: { x: -55, y: 0 },
+      pointB: { x: -flipperLength/2 + 20, y: 0 },
       stiffness: 1,
       length: 0
     });
 
     const rightPivot = Constraint.create({
-      pointA: { x: width * 0.7 + 50, y: pivotY },
+      pointA: { x: width * 0.6 + flipperLength/2 - 20, y: flipperY },
       bodyB: rightFlipper,
-      pointB: { x: 55, y: 0 },
+      pointB: { x: flipperLength/2 - 20, y: 0 },
       stiffness: 1,
       length: 0
     });
@@ -158,14 +179,14 @@ window.addEventListener('DOMContentLoaded', () => {
     // Управление
     const flipLeft = () => {
       if (isGameOver) return;
-      Body.setAngle(leftFlipper, -0.6);
-      setTimeout(() => Body.setAngle(leftFlipper, 0), 150);
+      Body.setAngle(leftFlipper, -0.7);
+      setTimeout(() => Body.setAngle(leftFlipper, 0), 180);
     };
 
     const flipRight = () => {
       if (isGameOver) return;
-      Body.setAngle(rightFlipper, 0.6);
-      setTimeout(() => Body.setAngle(rightFlipper, 0), 150);
+      Body.setAngle(rightFlipper, 0.7);
+      setTimeout(() => Body.setAngle(rightFlipper, 0), 180);
     };
 
     document.addEventListener('keydown', (e) => {
@@ -200,9 +221,6 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // =============================
-  // Жизни и Game Over
-  // =============================
   function loseLife() {
     lives--;
     livesEl.innerText = `Lives: ${lives}`;
@@ -215,7 +233,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   function resetBall() {
     if (ball) {
-      Body.setPosition(ball, { x: width / 2, y: 100 });
+      Body.setPosition(ball, { x: width / 2, y: 200 });
       Body.setVelocity(ball, { x: 0, y: 0 });
     }
   }
@@ -243,25 +261,15 @@ window.addEventListener('DOMContentLoaded', () => {
     location.reload();
   });
 
-  // =============================
-  // Запуск игры — С ЗАДЕРЖКОЙ и ПРОВЕРКОЙ
-  // =============================
   setTimeout(() => {
     try {
       createWorld();
-
-      // Запуск рендера и движка
       Render.run(render);
       Runner.run(Runner.create(), engine);
-
-      // Скрываем лоадер
       loadingEl.style.display = 'none';
-
-      // Обновляем UI
       scoreEl.innerText = `Score: ${score}`;
       livesEl.innerText = `Lives: ${lives}`;
 
-      // Адаптация
       window.addEventListener('resize', () => {
         render.options.width = window.innerWidth;
         render.options.height = window.innerHeight;
@@ -269,7 +277,6 @@ window.addEventListener('DOMContentLoaded', () => {
         render.canvas.height = window.innerHeight;
       });
 
-      // Защита от скролла
       document.body.addEventListener('touchmove', (e) => {
         if (!isGameOver) e.preventDefault();
       }, { passive: false });
@@ -278,6 +285,6 @@ window.addEventListener('DOMContentLoaded', () => {
       loadingEl.innerText = '❌ Ошибка: ' + err.message;
       console.error(err);
     }
-  }, 300); // Задержка для полной инициализации DOM и iframe
+  }, 300);
 
 });
