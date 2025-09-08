@@ -28,7 +28,7 @@ window.addEventListener('DOMContentLoaded', () => {
         };
         localStorage.setItem('2048_game_data', JSON.stringify(newData));
       } catch (e) {
-        console.error('Error saving 2048 data:', e);
+        console.error('Error saving 2048 ', e);
       }
       
       window.location.href = '../../index.html#' + encodeURIComponent(JSON.stringify(gameData));
@@ -111,6 +111,23 @@ window.addEventListener('DOMContentLoaded', () => {
       const value = Math.random() < 0.9 ? 2 : 4;
       
       grid[randomCell.x][randomCell.y] = value;
+      
+      // Создаем плитку
+      const tile = document.createElement('div');
+      tile.className = `tile tile-${value} tile-new`;
+      tile.textContent = value;
+      tile.style.left = `${randomCell.y * 25}%`;
+      tile.style.top = `${randomCell.x * 25}%`;
+      tile.dataset.x = randomCell.x;
+      tile.dataset.y = randomCell.y;
+      tile.dataset.value = value;
+      
+      tileContainer.appendChild(tile);
+      
+      // Убираем класс анимации через немного времени
+      setTimeout(() => {
+        tile.classList.remove('tile-new');
+      }, 100);
     }
   }
 
@@ -118,30 +135,40 @@ window.addEventListener('DOMContentLoaded', () => {
   // Обновление отображения игры
   // =============================
   function updateGame() {
-    // Очищаем контейнер плиток
-    tileContainer.innerHTML = '';
-    
-    // Создаем плитки для каждой ячейки
-    for (let i = 0; i < gridSize; i++) {
-      for (let j = 0; j < gridSize; j++) {
-        const value = grid[i][j];
-        if (value !== 0) {
-          const tile = document.createElement('div');
-          tile.className = `tile tile-${value}`;
-          if (value > 2048) {
-            tile.classList.add('tile-super');
-          }
-          tile.textContent = value;
-          tile.style.left = `${j * 25}%`;
-          tile.style.top = `${i * 25}%`;
-          tileContainer.appendChild(tile);
-        }
-      }
-    }
-    
     // Обновляем счет
     scoreElement.textContent = score;
     bestScoreElement.textContent = bestScore;
+  }
+
+  // =============================
+  // Анимация перемещения плитки
+  // =============================
+  function animateTileMove(tileElement, fromX, fromY, toX, toY) {
+    tileElement.style.transition = 'none';
+    tileElement.style.transform = `translate(${(toY - fromY) * 100}%, ${(toX - fromX) * 100}%)`;
+    
+    // Принудительная перерисовка
+    tileElement.offsetHeight;
+    
+    // Анимируем перемещение
+    tileElement.style.transition = 'transform 0.15s ease';
+    tileElement.style.transform = 'translate(0, 0)';
+  }
+
+  // =============================
+  // Анимация объединения плиток
+  // =============================
+  function animateTileMerge(tileElement, newValue) {
+    tileElement.classList.add('tile-merged');
+    tileElement.textContent = newValue;
+    
+    // Обновляем класс
+    tileElement.className = `tile tile-${newValue} tile-merged`;
+    
+    // Убираем класс анимации через немного времени
+    setTimeout(() => {
+      tileElement.classList.remove('tile-merged');
+    }, 150);
   }
 
   // =============================
@@ -153,6 +180,12 @@ window.addEventListener('DOMContentLoaded', () => {
     for (let i = 0; i < gridSize; i++) {
       // Удаляем нули и сжимаем
       const row = grid[i].filter(val => val !== 0);
+      const positions = [];
+      for (let j = 0; j < gridSize; j++) {
+        if (grid[i][j] !== 0) {
+          positions.push(j);
+        }
+      }
       
       // Объединяем соседние одинаковые значения
       for (let j = 0; j < row.length - 1; j++) {
@@ -167,19 +200,48 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       
       // Удаляем нули после объединения
-      const newRow = row.filter(val => val !== 0);
+      const filteredRow = row.filter(val => val !== 0);
       
       // Добавляем нули в конец
-      while (newRow.length < gridSize) {
-        newRow.push(0);
+      while (filteredRow.length < gridSize) {
+        filteredRow.push(0);
       }
       
-      // Проверяем, изменилась ли строка
-      for (let j = 0; j < gridSize; j++) {
-        if (grid[i][j] !== newRow[j]) {
+      // Анимируем перемещение и объединение
+      for (let j = 0; j < positions.length; j++) {
+        const oldPos = positions[j];
+        const newPos = j;
+        if (oldPos !== newPos) {
           moved = true;
+          // Находим плитку и анимируем её перемещение
+          const tileElement = document.querySelector(`.tile[data-x="${i}"][data-y="${oldPos}"]`);
+          if (tileElement) {
+            animateTileMove(tileElement, i, oldPos, i, newPos);
+            tileElement.dataset.y = newPos;
+          }
         }
-        grid[i][j] = newRow[j];
+      }
+      
+      // Анимируем объединение
+      for (let j = 0; j < row.length - 1; j++) {
+        if (row[j] === row[j + 1] && row[j] !== 0) {
+          const tileElement = document.querySelector(`.tile[data-x="${i}"][data-y="${j}"]`);
+          if (tileElement) {
+            animateTileMerge(tileElement, row[j] * 2);
+            tileElement.dataset.value = row[j] * 2;
+          }
+          
+          // Удаляем вторую плитку
+          const secondTile = document.querySelector(`.tile[data-x="${i}"][data-y="${j + 1}"]`);
+          if (secondTile) {
+            secondTile.remove();
+          }
+        }
+      }
+      
+      // Обновляем сетку
+      for (let j = 0; j < gridSize; j++) {
+        grid[i][j] = filteredRow[j] || 0;
       }
     }
     
@@ -195,6 +257,12 @@ window.addEventListener('DOMContentLoaded', () => {
     for (let i = 0; i < gridSize; i++) {
       // Удаляем нули и сжимаем
       const row = grid[i].filter(val => val !== 0);
+      const positions = [];
+      for (let j = 0; j < gridSize; j++) {
+        if (grid[i][j] !== 0) {
+          positions.push(j);
+        }
+      }
       
       // Объединяем соседние одинаковые значения (справа налево)
       for (let j = row.length - 1; j > 0; j--) {
@@ -209,19 +277,50 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       
       // Удаляем нули после объединения
-      const newRow = row.filter(val => val !== 0);
+      const filteredRow = row.filter(val => val !== 0);
       
       // Добавляем нули в начало
-      while (newRow.length < gridSize) {
-        newRow.unshift(0);
+      const newRow = [];
+      while (newRow.length < gridSize - filteredRow.length) {
+        newRow.push(0);
+      }
+      newRow.push(...filteredRow);
+      
+      // Анимируем перемещение
+      for (let j = 0; j < positions.length; j++) {
+        const oldPos = positions[j];
+        const newPos = newRow.length - filteredRow.length + j;
+        if (oldPos !== newPos) {
+          moved = true;
+          // Находим плитку и анимируем её перемещение
+          const tileElement = document.querySelector(`.tile[data-x="${i}"][data-y="${oldPos}"]`);
+          if (tileElement) {
+            animateTileMove(tileElement, i, oldPos, i, newPos);
+            tileElement.dataset.y = newPos;
+          }
+        }
       }
       
-      // Проверяем, изменилась ли строка
-      for (let j = 0; j < gridSize; j++) {
-        if (grid[i][j] !== newRow[j]) {
-          moved = true;
+      // Анимируем объединение
+      for (let j = row.length - 1; j > 0; j--) {
+        if (row[j] === row[j - 1] && row[j] !== 0) {
+          const tileElement = document.querySelector(`.tile[data-x="${i}"][data-y="${gridSize - row.length + j}"]`);
+          if (tileElement) {
+            animateTileMerge(tileElement, row[j] * 2);
+            tileElement.dataset.value = row[j] * 2;
+          }
+          
+          // Удаляем вторую плитку
+          const secondTile = document.querySelector(`.tile[data-x="${i}"][data-y="${gridSize - row.length + j - 1}"]`);
+          if (secondTile) {
+            secondTile.remove();
+          }
         }
-        grid[i][j] = newRow[j];
+      }
+      
+      // Обновляем сетку
+      for (let j = 0; j < gridSize; j++) {
+        grid[i][j] = newRow[j] || 0;
       }
     }
     
@@ -237,39 +336,69 @@ window.addEventListener('DOMContentLoaded', () => {
     for (let j = 0; j < gridSize; j++) {
       // Создаем столбец
       const column = [];
+      const positions = [];
       for (let i = 0; i < gridSize; i++) {
-        column.push(grid[i][j]);
+        if (grid[i][j] !== 0) {
+          column.push(grid[i][j]);
+          positions.push(i);
+        }
       }
       
-      // Удаляем нули и сжимаем
-      const filteredColumn = column.filter(val => val !== 0);
-      
       // Объединяем соседние одинаковые значения
-      for (let i = 0; i < filteredColumn.length - 1; i++) {
-        if (filteredColumn[i] === filteredColumn[i + 1]) {
-          filteredColumn[i] *= 2;
-          filteredColumn[i + 1] = 0;
-          score += filteredColumn[i];
-          if (filteredColumn[i] === 2048 && !keepPlaying) {
+      for (let i = 0; i < column.length - 1; i++) {
+        if (column[i] === column[i + 1]) {
+          column[i] *= 2;
+          column[i + 1] = 0;
+          score += column[i];
+          if (column[i] === 2048 && !keepPlaying) {
             gameWon = true;
           }
         }
       }
       
       // Удаляем нули после объединения
-      const newColumn = filteredColumn.filter(val => val !== 0);
+      const filteredColumn = column.filter(val => val !== 0);
       
       // Добавляем нули в конец
-      while (newColumn.length < gridSize) {
-        newColumn.push(0);
+      while (filteredColumn.length < gridSize) {
+        filteredColumn.push(0);
       }
       
-      // Проверяем, изменился ли столбец
-      for (let i = 0; i < gridSize; i++) {
-        if (grid[i][j] !== newColumn[i]) {
+      // Анимируем перемещение
+      for (let i = 0; i < positions.length; i++) {
+        const oldPos = positions[i];
+        const newPos = i;
+        if (oldPos !== newPos) {
           moved = true;
+          // Находим плитку и анимируем её перемещение
+          const tileElement = document.querySelector(`.tile[data-x="${oldPos}"][data-y="${j}"]`);
+          if (tileElement) {
+            animateTileMove(tileElement, oldPos, j, newPos, j);
+            tileElement.dataset.x = newPos;
+          }
         }
-        grid[i][j] = newColumn[i];
+      }
+      
+      // Анимируем объединение
+      for (let i = 0; i < column.length - 1; i++) {
+        if (column[i] === column[i + 1] && column[i] !== 0) {
+          const tileElement = document.querySelector(`.tile[data-x="${i}"][data-y="${j}"]`);
+          if (tileElement) {
+            animateTileMerge(tileElement, column[i] * 2);
+            tileElement.dataset.value = column[i] * 2;
+          }
+          
+          // Удаляем вторую плитку
+          const secondTile = document.querySelector(`.tile[data-x="${i + 1}"][data-y="${j}"]`);
+          if (secondTile) {
+            secondTile.remove();
+          }
+        }
+      }
+      
+      // Обновляем сетку
+      for (let i = 0; i < gridSize; i++) {
+        grid[i][j] = filteredColumn[i] || 0;
       }
     }
     
@@ -285,39 +414,71 @@ window.addEventListener('DOMContentLoaded', () => {
     for (let j = 0; j < gridSize; j++) {
       // Создаем столбец
       const column = [];
+      const positions = [];
       for (let i = 0; i < gridSize; i++) {
-        column.push(grid[i][j]);
+        if (grid[i][j] !== 0) {
+          column.push(grid[i][j]);
+          positions.push(i);
+        }
       }
       
-      // Удаляем нули и сжимаем
-      const filteredColumn = column.filter(val => val !== 0);
-      
       // Объединяем соседние одинаковые значения (снизу вверх)
-      for (let i = filteredColumn.length - 1; i > 0; i--) {
-        if (filteredColumn[i] === filteredColumn[i - 1]) {
-          filteredColumn[i] *= 2;
-          filteredColumn[i - 1] = 0;
-          score += filteredColumn[i];
-          if (filteredColumn[i] === 2048 && !keepPlaying) {
+      for (let i = column.length - 1; i > 0; i--) {
+        if (column[i] === column[i - 1]) {
+          column[i] *= 2;
+          column[i - 1] = 0;
+          score += column[i];
+          if (column[i] === 2048 && !keepPlaying) {
             gameWon = true;
           }
         }
       }
       
       // Удаляем нули после объединения
-      const newColumn = filteredColumn.filter(val => val !== 0);
+      const filteredColumn = column.filter(val => val !== 0);
       
       // Добавляем нули в начало
-      while (newColumn.length < gridSize) {
-        newColumn.unshift(0);
+      const newColumn = [];
+      while (newColumn.length < gridSize - filteredColumn.length) {
+        newColumn.push(0);
+      }
+      newColumn.push(...filteredColumn);
+      
+      // Анимируем перемещение
+      for (let i = 0; i < positions.length; i++) {
+        const oldPos = positions[i];
+        const newPos = newColumn.length - filteredColumn.length + i;
+        if (oldPos !== newPos) {
+          moved = true;
+          // Находим плитку и анимируем её перемещение
+          const tileElement = document.querySelector(`.tile[data-x="${oldPos}"][data-y="${j}"]`);
+          if (tileElement) {
+            animateTileMove(tileElement, oldPos, j, newPos, j);
+            tileElement.dataset.x = newPos;
+          }
+        }
       }
       
-      // Проверяем, изменился ли столбец
-      for (let i = 0; i < gridSize; i++) {
-        if (grid[i][j] !== newColumn[i]) {
-          moved = true;
+      // Анимируем объединение
+      for (let i = column.length - 1; i > 0; i--) {
+        if (column[i] === column[i - 1] && column[i] !== 0) {
+          const tileElement = document.querySelector(`.tile[data-x="${gridSize - column.length + i}"][data-y="${j}"]`);
+          if (tileElement) {
+            animateTileMerge(tileElement, column[i] * 2);
+            tileElement.dataset.value = column[i] * 2;
+          }
+          
+          // Удаляем вторую плитку
+          const secondTile = document.querySelector(`.tile[data-x="${gridSize - column.length + i - 1}"][data-y="${j}"]`);
+          if (secondTile) {
+            secondTile.remove();
+          }
         }
-        grid[i][j] = newColumn[i];
+      }
+      
+      // Обновляем сетку
+      for (let i = 0; i < gridSize; i++) {
+        grid[i][j] = newColumn[i] || 0;
       }
     }
     
@@ -391,22 +552,29 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     
     if (moved) {
-      addRandomTile();
-      updateGame();
-      
-      // Обновляем лучший счет
-      if (score > bestScore) {
-        bestScore = score;
-        saveBestScore();
-      }
-      
-      // Проверяем конец игры
-      if (!canMove()) {
-        gameOver = true;
-        showGameOver();
-      } else if (gameWon) {
-        showGameWon();
-      }
+      // Ждем окончания анимаций, затем добавляем новую плитку
+      setTimeout(() => {
+        addRandomTile();
+        updateGame();
+        
+        // Обновляем лучший счет
+        if (score > bestScore) {
+          bestScore = score;
+          saveBestScore();
+        }
+        
+        // Проверяем конец игры
+        if (!canMove()) {
+          gameOver = true;
+          setTimeout(() => {
+            showGameOver();
+          }, 300);
+        } else if (gameWon) {
+          setTimeout(() => {
+            showGameWon();
+          }, 300);
+        }
+      }, 150);
     }
   }
 
@@ -480,7 +648,7 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 
   // =============================
-  // Свайпы для мобильных (ИСПРАВЛЕНО)
+  // Свайпы для мобильных
   // =============================
   let touchStartX = 0;
   let touchStartY = 0;
@@ -488,12 +656,10 @@ window.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('touchstart', (e) => {
     touchStartX = e.touches[0].clientX;
     touchStartY = e.touches[0].clientY;
-    // Предотвращаем свайп вниз для закрытия приложения
     e.preventDefault();
   }, { passive: false });
 
   document.addEventListener('touchmove', (e) => {
-    // Предотвращаем свайп вниз для закрытия приложения
     e.preventDefault();
   }, { passive: false });
 
@@ -506,63 +672,3 @@ window.addEventListener('DOMContentLoaded', () => {
     const dx = touchEndX - touchStartX;
     const dy = touchEndY - touchStartY;
     
-    const minSwipeDistance = 30; // Минимальная дистанция свайпа
-    
-    // Определяем направление свайпа
-    if (Math.abs(dx) > Math.abs(dy)) {
-      // Горизонтальный свайп
-      if (Math.abs(dx) > minSwipeDistance) {
-        if (dx > 0) {
-          makeMove('right');
-        } else {
-          makeMove('left');
-        }
-      }
-    } else {
-      // Вертикальный свайп
-      if (Math.abs(dy) > minSwipeDistance) {
-        if (dy > 0) {
-          makeMove('down');
-        } else {
-          makeMove('up');
-        }
-      }
-    }
-    
-    touchStartX = 0;
-    touchStartY = 0;
-    
-    // Предотвращаем свайп вниз для закрытия приложения
-    e.preventDefault();
-  }, { passive: false });
-
-  // =============================
-  // Обработка кнопок
-  // =============================
-  restartButton.addEventListener('click', () => {
-    score = 0;
-    gameOver = false;
-    gameWon = false;
-    keepPlaying = false;
-    initGame();
-  });
-
-  retryButton.addEventListener('click', () => {
-    score = 0;
-    gameOver = false;
-    gameWon = false;
-    keepPlaying = false;
-    initGame();
-  });
-
-  keepPlayingButton.addEventListener('click', () => {
-    keepPlaying = true;
-    gameMessage.classList.remove('game-won');
-  });
-
-  // =============================
-  // Запуск игры
-  // =============================
-  initGame();
-
-});
