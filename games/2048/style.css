@@ -1,0 +1,230 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+body {
+  background: #faf8ef;
+  font-family: 'Arial', sans-serif;
+  color: #776e65;
+  overflow: hidden;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#game-container {
+  width: 100%;
+  max-width: 500px;
+  padding: 20px;
+  position: relative;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.scores {
+  display: flex;
+  gap: 10px;
+}
+
+.score-container {
+  background: #bbada0;
+  padding: 10px 15px;
+  border-radius: 6px;
+  text-align: center;
+  min-width: 80px;
+}
+
+.score-title {
+  font-size: 13px;
+  font-weight: bold;
+  text-transform: uppercase;
+  color: #eee4da;
+  margin-bottom: 5px;
+}
+
+.score-value {
+  font-size: 20px;
+  font-weight: bold;
+  color: white;
+}
+
+.restart-button {
+  background: #8f7a66;
+  color: #f9f6f2;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 15px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.restart-button:hover {
+  background: #9f8a76;
+}
+
+.game-message {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(238, 228, 218, 0.73);
+  z-index: 100;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.game-message.game-won {
+  display: flex;
+}
+
+.game-message.game-over {
+  display: flex;
+  background: rgba(238, 228, 218, 0.85);
+}
+
+.message-content p {
+  font-size: 36px;
+  font-weight: bold;
+  margin-bottom: 20px;
+  color: #776e65;
+}
+
+.lower {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+#keep-playing-button, #retry-button {
+  background: #8f7a66;
+  color: #f9f6f2;
+  border: none;
+  border-radius: 6px;
+  padding: 10px 20px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+#retry-button {
+  background: #92826a;
+}
+
+.grid-container {
+  background: #bbada0;
+  border-radius: 6px;
+  position: relative;
+  padding: 10px;
+}
+
+.grid-row {
+  display: flex;
+  margin-bottom: 10px;
+}
+
+.grid-row:last-child {
+  margin-bottom: 0;
+}
+
+.grid-cell {
+  width: 20%;
+  height: 80px;
+  background: rgba(238, 228, 218, 0.35);
+  border-radius: 3px;
+  margin-right: 10px;
+}
+
+.grid-cell:last-child {
+  margin-right: 0;
+}
+
+.tile-container {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  right: 20px;
+  bottom: 20px;
+}
+
+.tile {
+  position: absolute;
+  width: 20%;
+  height: 80px;
+  border-radius: 3px;
+  background: #eee4da;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  transition: all 0.15s ease;
+  margin-right: 10px;
+  margin-bottom: 10px;
+}
+
+.tile:last-child {
+  margin-right: 0;
+}
+
+.tile-2 { background: #eee4da; color: #776e65; }
+.tile-4 { background: #ede0c8; color: #776e65; }
+.tile-8 { background: #f2b179; color: #f9f6f2; }
+.tile-16 { background: #f59563; color: #f9f6f2; }
+.tile-32 { background: #f67c5f; color: #f9f6f2; }
+.tile-64 { background: #f65e3b; color: #f9f6f2; }
+.tile-128 { background: #edcf72; color: #f9f6f2; font-size: 28px; }
+.tile-256 { background: #edcc61; color: #f9f6f2; font-size: 28px; }
+.tile-512 { background: #edc850; color: #f9f6f2; font-size: 28px; }
+.tile-1024 { background: #edc53f; color: #f9f6f2; font-size: 24px; }
+.tile-2048 { background: #edc22e; color: #f9f6f2; font-size: 24px; }
+
+.tile-super { background: #3c3a32; color: #f9f6f2; font-size: 20px; }
+
+.instructions {
+  margin-top: 20px;
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.instructions strong {
+  color: #776e65;
+}
+
+/* Адаптация для мобильных */
+@media (max-width: 500px) {
+  .tile {
+    height: 70px;
+    font-size: 24px;
+  }
+  
+  .tile-128, .tile-256, .tile-512 {
+    font-size: 20px;
+  }
+  
+  .tile-1024, .tile-2048 {
+    font-size: 18px;
+  }
+  
+  .score-value {
+    font-size: 18px;
+  }
+  
+  .message-content p {
+    font-size: 24px;
+  }
+}
