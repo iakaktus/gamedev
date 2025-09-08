@@ -12,13 +12,16 @@ window.addEventListener('DOMContentLoaded', () => {
     tg.MainButton.setParams({ color: '#ff5722', text_color: '#ffffff' });
   }
 
-  const width = window.innerWidth;
-  const height = window.innerHeight;
+  // =============================
+  // Переменные для адаптации
+  // =============================
+  let width = window.innerWidth;
+  let height = window.innerHeight;
 
   const { Engine, Render, Runner, World, Bodies, Body, Events, Constraint } = Matter;
 
   const engine = Engine.create({
-    gravity: { x: 0, y: 0.6 } // чуть меньше гравитации
+    gravity: { x: 0, y: 0.6 }
   });
 
   const canvasContainer = document.createElement('div');
@@ -48,6 +51,7 @@ window.addEventListener('DOMContentLoaded', () => {
   let lives = 3;
   let isGameOver = false;
   let ball = null;
+  let worldBodies = []; // Для удаления при ресайзе
 
   const scoreEl = document.getElementById('score');
   const livesEl = document.getElementById('lives');
@@ -56,12 +60,43 @@ window.addEventListener('DOMContentLoaded', () => {
   const restartBtn = document.getElementById('restart-btn');
   const loadingEl = document.getElementById('loading');
 
+  // =============================
+  // Функция создания мира с адаптацией
+  // =============================
   function createWorld() {
+    // Удаляем старые тела, если есть
+    if (worldBodies.length > 0) {
+      World.remove(engine.world, worldBodies);
+    }
 
-    // ТОЛЬКО НИЖНИЕ СТЕНЫ С ДЫРОЙ ПОСЕРЕДИНЕ
+    // Обновляем размеры
+    width = window.innerWidth;
+    height = window.innerHeight;
+
+    // Обновляем рендер
+    render.options.width = width;
+    render.options.height = height;
+    render.canvas.width = width;
+    render.canvas.height = height;
+    render.bounds.max.x = width;
+    render.bounds.max.y = height;
+
     const wallThickness = 50;
     
-    // Левая нижняя стена
+    // Стены
+    const topWall = Bodies.rectangle(width / 2, wallThickness/2, width, wallThickness, {
+      isStatic: true, render: { fillStyle: '#444' }
+    });
+
+    const leftWall = Bodies.rectangle(wallThickness/2, height/2, wallThickness, height, {
+      isStatic: true, render: { fillStyle: '#444' }
+    });
+
+    const rightWall = Bodies.rectangle(width - wallThickness/2, height/2, wallThickness, height, {
+      isStatic: true, render: { fillStyle: '#444' }
+    });
+
+    // Нижние стены с дырой
     const floorLeft = Bodies.rectangle(
       width * 0.25, 
       height - wallThickness/2, 
@@ -70,7 +105,6 @@ window.addEventListener('DOMContentLoaded', () => {
       { isStatic: true, render: { fillStyle: '#444' } }
     );
 
-    // Правая нижняя стена
     const floorRight = Bodies.rectangle(
       width * 0.75, 
       height - wallThickness/2, 
@@ -79,25 +113,9 @@ window.addEventListener('DOMContentLoaded', () => {
       { isStatic: true, render: { fillStyle: '#444' } }
     );
 
-    // Верхние стены (рамка)
-    const topWall = Bodies.rectangle(width / 2, wallThickness/2, width, wallThickness, {
-      isStatic: true,
-      render: { fillStyle: '#444' }
-    });
-
-    const leftWall = Bodies.rectangle(wallThickness/2, height/2, wallThickness, height, {
-      isStatic: true,
-      render: { fillStyle: '#444' }
-    });
-
-    const rightWall = Bodies.rectangle(width - wallThickness/2, height/2, wallThickness, height, {
-      isStatic: true,
-      render: { fillStyle: '#444' }
-    });
-
-    // Флипперы — БОЛЬШЕ И БЛИЖЕ К ЦЕНТРУ
-    const flipperY = height - 120; // выше от нижней границы
-    const flipperLength = 140; // длиннее
+    // Флипперы
+    const flipperY = height - 120;
+    const flipperLength = 140;
     const flipperWidth = 25;
 
     const leftFlipper = Bodies.rectangle(
@@ -132,7 +150,7 @@ window.addEventListener('DOMContentLoaded', () => {
       render: { fillStyle: '#ff3366' }
     });
 
-    // Буферы (bumper'ы)
+    // Буферы
     const bumpers = [
       Bodies.circle(width * 0.3, height * 0.25, 30, { isStatic: true, restitution: 1.3, render: { fillStyle: '#00ffff' } }),
       Bodies.circle(width * 0.7, height * 0.25, 30, { isStatic: true, restitution: 1.3, render: { fillStyle: '#00ffff' } }),
@@ -141,21 +159,24 @@ window.addEventListener('DOMContentLoaded', () => {
       Bodies.circle(width * 0.8, height * 0.6, 25, { isStatic: true, restitution: 1.2, render: { fillStyle: '#00ff00' } }),
     ];
 
-    // Рампы и препятствия
+    // Рампы
     const ramps = [
       Bodies.rectangle(width * 0.3, height * 0.7, 120, 20, { isStatic: true, angle: -0.4, render: { fillStyle: '#666' } }),
       Bodies.rectangle(width * 0.7, height * 0.7, 120, 20, { isStatic: true, angle: 0.4, render: { fillStyle: '#666' } }),
       Bodies.rectangle(width * 0.5, height * 0.85, 200, 20, { isStatic: true, angle: 0, render: { fillStyle: '#888' } }),
     ];
 
-    World.add(engine.world, [
+    // Сохраняем тела для возможного удаления
+    worldBodies = [
       topWall, leftWall, rightWall,
       floorLeft, floorRight,
       leftFlipper, rightFlipper,
       ball,
       ...bumpers,
       ...ramps
-    ]);
+    ];
+
+    World.add(engine.world, worldBodies);
 
     // Ограничения флипперов
     const leftPivot = Constraint.create({
@@ -221,6 +242,9 @@ window.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // =============================
+  // Функции управления жизнями
+  // =============================
   function loseLife() {
     lives--;
     livesEl.innerText = `Lives: ${lives}`;
@@ -261,6 +285,9 @@ window.addEventListener('DOMContentLoaded', () => {
     location.reload();
   });
 
+  // =============================
+  // Запуск и адаптация
+  // =============================
   setTimeout(() => {
     try {
       createWorld();
@@ -270,11 +297,9 @@ window.addEventListener('DOMContentLoaded', () => {
       scoreEl.innerText = `Score: ${score}`;
       livesEl.innerText = `Lives: ${lives}`;
 
+      // Обработчик изменения размера окна
       window.addEventListener('resize', () => {
-        render.options.width = window.innerWidth;
-        render.options.height = window.innerHeight;
-        render.canvas.width = window.innerWidth;
-        render.canvas.height = window.innerHeight;
+        createWorld(); // Пересоздаём мир с новыми размерами
       });
 
       document.body.addEventListener('touchmove', (e) => {
