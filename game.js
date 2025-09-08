@@ -30,7 +30,7 @@ window.addEventListener('DOMContentLoaded', () => {
   let score = 0;
   let lives = 3;
   let level = 1;
-  let gameSpeed = 1; // Увеличили скорость (меньше = быстрее)
+  let gameSpeed = 100; // Увеличили скорость (меньше = быстрее)
   let gameRunning = false;
   let lastTime = 0;
   let accumulator = 0;
@@ -910,4 +910,5 @@ window.addEventListener('DOMContentLoaded', () => {
   initGame();
 
 });
+
 
