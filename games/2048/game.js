@@ -26,7 +26,7 @@ window.addEventListener('DOMContentLoaded', () => {
         };
         localStorage.setItem('2048_game_data', JSON.stringify(newData));
       } catch (e) {
-        console.error('Error saving 2048 data:', e);
+        console.error('Error saving 2048 ', e);
       }
       
       window.location.href = '../../index.html#' + encodeURIComponent(JSON.stringify(gameData));
@@ -143,7 +143,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Move left
   function moveLeft() {
     let moved = false;
-    for (let row = 0; row < GRID_SIZE; row++) {
+    for (let row =0; row < GRID_SIZE; row++) {
       const rowValues = grid[row].filter(val => val !== 0);
       
       // Merge tiles
@@ -260,7 +260,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // Move down
   function moveDown() {
     let moved = false;
-    for (let col = 0; col < GRID_SIZE; col++) {
+    for (let col =0; col < GRID_SIZE; col++) {
       const colValues = [];
       for (let row = 0; row < GRID_SIZE; row++) {
         if (grid[row][col] !== 0) {
