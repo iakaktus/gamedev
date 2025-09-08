@@ -50,7 +50,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const restartBtn = document.getElementById('restart-btn');
 
   // =============================
-  // Создание игрового мира
+  // Создание игрового мира (ИСПРАВЛЕНО)
   // =============================
   function createWorld() {
     // Очищаем предыдущий мир
@@ -64,11 +64,11 @@ window.addEventListener('DOMContentLoaded', () => {
       Bodies.rectangle(GAME_WIDTH, GAME_HEIGHT / 2, 20, GAME_HEIGHT, { isStatic: true, render: { fillStyle: '#444' } }), // право
     ];
 
-    // Нижние стены с дырой
+    // Нижние стены с дырой (ПОД флипперами)
     const floorLeft = Bodies.rectangle(100, GAME_HEIGHT - 10, 180, 20, { isStatic: true, render: { fillStyle: '#444' } });
     const floorRight = Bodies.rectangle(300, GAME_HEIGHT - 10, 180, 20, { isStatic: true, render: { fillStyle: '#444' } });
 
-    // Флипперы
+    // Флипперы (внизу)
     const flipperY = GAME_HEIGHT - 80;
     leftFlipper = Bodies.rectangle(120, flipperY, 90, 12, {
       isStatic: true,
@@ -82,7 +82,13 @@ window.addEventListener('DOMContentLoaded', () => {
       render: { fillStyle: '#ff5722' }
     });
 
-    // Буферы
+    // Плунжер (слева внизу)
+    const plunger = Bodies.rectangle(50, GAME_HEIGHT - 150, 15, 100, {
+      isStatic: true,
+      render: { fillStyle: '#666' }
+    });
+
+    // Буферы (в верхней части поля)
     const bumpers = [
       Bodies.circle(100, 150, 25, { isStatic: true, restitution: 1.4, render: { fillStyle: '#00ffff' } }),
       Bodies.circle(300, 150, 25, { isStatic: true, restitution: 1.4, render: { fillStyle: '#00ffff' } }),
@@ -91,17 +97,25 @@ window.addEventListener('DOMContentLoaded', () => {
       Bodies.circle(320, 350, 20, { isStatic: true, restitution: 1.3, render: { fillStyle: '#ff00ff' } }),
     ];
 
-    // Рампы
+    // Рампы (в средней части)
     const ramps = [
-      Bodies.rectangle(100, 550, 120, 15, { isStatic: true, angle: -0.4, render: { fillStyle: '#666' } }),
-      Bodies.rectangle(300, 550, 120, 15, { isStatic: true, angle: 0.4, render: { fillStyle: '#666' } }),
+      Bodies.rectangle(150, 450, 100, 15, { isStatic: true, angle: -0.3, render: { fillStyle: '#666' } }),
+      Bodies.rectangle(250, 450, 100, 15, { isStatic: true, angle: 0.3, render: { fillStyle: '#666' } }),
+    ];
+
+    // Специальные зоны (в верхней части)
+    const specialZones = [
+      Bodies.rectangle(50, 80, 60, 20, { isStatic: true, render: { fillStyle: '#ff9800' } }),
+      Bodies.rectangle(350, 80, 60, 20, { isStatic: true, render: { fillStyle: '#ff9800' } }),
     ];
 
     World.add(engine.world, [
       ...walls, floorLeft, floorRight,
       leftFlipper, rightFlipper,
+      plunger,
       ...bumpers,
-      ...ramps
+      ...ramps,
+      ...specialZones
     ]);
 
     // Ограничения флипперов
@@ -123,7 +137,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
     World.add(engine.world, [leftPivot, rightPivot]);
 
-    // Создаем шарик
+    // Создаем шарик (ПОД плунжером)
     launchBall();
 
     // Обработка столкновений
@@ -141,6 +155,9 @@ window.addEventListener('DOMContentLoaded', () => {
             score += 50;
             updateScore();
           } else if (other.render.fillStyle === '#ff00ff') {
+            score += 100;
+            updateScore();
+          } else if (other.render.fillStyle === '#ff9800') {
             score += 100;
             updateScore();
           }
@@ -178,7 +195,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // =============================
-  // Плунжер (стартер шарика)
+  // Плунжер (стартер шарика) - ИСПРАВЛЕНО
   // =============================
   function startPlunger() {
     if (isGameOver) return;
@@ -192,7 +209,8 @@ window.addEventListener('DOMContentLoaded', () => {
     plungerCharging = false;
     
     if (ball) {
-      const force = Math.min(plungerPower * 0.02, 0.5);
+      // Правильная сила запуска (вверх, а не в сторону)
+      const force = Math.min(plungerPower * 0.015, 0.4);
       Body.applyForce(ball, ball.position, { x: 0, y: -force });
     }
     
@@ -208,14 +226,15 @@ window.addEventListener('DOMContentLoaded', () => {
   plungerBtn.addEventListener('mouseleave', releasePlunger);
 
   // =============================
-  // Запуск шарика
+  // Запуск шарика (ИСПРАВЛЕНО ПОЗИЦИЮ)
   // =============================
   function launchBall() {
     if (ball) {
       World.remove(engine.world, ball);
     }
     
-    ball = Bodies.circle(50, GAME_HEIGHT - 200, BALL_RADIUS, {
+    // Шарик стартует ПОД плунжером, а не над препятствиями
+    ball = Bodies.circle(50, GAME_HEIGHT - 100, BALL_RADIUS, {
       restitution: 0.8,
       frictionAir: 0.003,
       render: { fillStyle: '#ff3366' }
